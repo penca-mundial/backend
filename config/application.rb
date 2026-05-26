@@ -50,5 +50,8 @@ module Backend
     # cookie-backed sessions. Add cookies here; the session store itself is
     # configured in config/initializers/session_store.rb.
     config.middleware.use ActionDispatch::Cookies
+
+    # Background jobs run on Solid Queue (Postgres-backed) in every environment.
+    config.active_job.queue_adapter = :solid_queue
   end
 end

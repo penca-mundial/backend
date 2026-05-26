@@ -19,23 +19,9 @@ test:
   <<: *default
   url: <%= ENV.fetch("DATABASE_URL", "postgres://localhost/penca_test") %>
 
-# Production uses separate databases for the primary data and the Solid Queue /
-# Cache / Cable backends. The production deploy ticket wires these to Render.
+# Single database for everything (primary data plus the Solid Queue / Cache /
+# Cable tables). Connection comes from DATABASE_URL; the production deploy ticket
+# points it at Neon.
 production:
-  primary: &primary_production
-    <<: *default
-    database: backend_production
-    username: backend
-    password: <%= ENV["BACKEND_DATABASE_PASSWORD"] %>
-  cache:
-    <<: *primary_production
-    database: backend_production_cache
-    migrations_paths: db/cache_migrate
-  queue:
-    <<: *primary_production
-    database: backend_production_queue
-    migrations_paths: db/queue_migrate
-  cable:
-    <<: *primary_production
-    database: backend_production_cable
-    migrations_paths: db/cable_migrate
+  <<: *default
+  url: <%= ENV["DATABASE_URL"] %>
