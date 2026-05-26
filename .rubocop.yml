@@ -1,8 +1,24 @@
-# Omakase Ruby styling for Rails
+# Omakase Ruby styling for Rails. rubocop-performance and rubocop-rails are
+# loaded by the omakase config; we add rubocop-rspec for spec files.
 inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 
-# Overwrite or add rules to create your own house style
-#
-# # Use `[a, [b, c]]` not `[ a, [ b, c ] ]`
-# Layout/SpaceInsideArrayLiteralBrackets:
-#   Enabled: false
+plugins:
+  - rubocop-rspec
+
+# Merge our Exclude entries with the ones omakase already defines.
+inherit_mode:
+  merge:
+    - Exclude
+
+AllCops:
+  NewCops: enable
+  Exclude:
+    - "bin/**/*"
+    - "db/schema.rb"
+    - "db/migrate/**/*"
+    - "vendor/**/*"
+
+# House style: allow lines up to 120 characters.
+Layout/LineLength:
+  Enabled: true
+  Max: 120
