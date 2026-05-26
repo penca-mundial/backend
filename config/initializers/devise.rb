@@ -271,9 +271,16 @@ Devise.setup do |config|
   config.sign_out_via = :delete
 
   # ==> OmniAuth
-  # Add a new OmniAuth provider. Check the wiki for more information on setting
-  # up on your models and hooks.
-  # config.omniauth :github, 'APP_ID', 'APP_SECRET', scope: 'user,public_repo'
+  # Google sign-in. Credentials come from ENV; when blank (e.g. local dev) the
+  # provider is still registered and the app boots, but the flow only works once
+  # GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET are set. See README for setup.
+  config.omniauth :google_oauth2,
+    ENV["GOOGLE_CLIENT_ID"],
+    ENV["GOOGLE_CLIENT_SECRET"],
+    {
+      scope: "email,profile",
+      prompt: "select_account"
+    }
 
   # ==> Warden configuration
   # If you want to use other strategies, that are not supported by Devise, or

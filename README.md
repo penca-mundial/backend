@@ -40,6 +40,31 @@ Pushes to `main` auto-deploy to Render. See `render.yaml`.
 
 See `.env.example`.
 
+## Google OAuth setup
+
+Sign-in with Google uses OmniAuth (`omniauth-google-oauth2`). To obtain
+credentials:
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/) and
+   create (or select) a project.
+2. **OAuth consent screen** → choose **External**, fill in the app name,
+   support email, and developer contact. Add the `email` and `profile`
+   scopes. While unverified, add your testers under **Test users**.
+3. **Credentials** → **Create credentials** → **OAuth client ID** →
+   **Web application**.
+4. Add the **Authorized redirect URIs**:
+   - Development: `http://localhost:3000/api/v1/auth/google_oauth2/callback`
+   - Production: `https://<backend-domain>/api/v1/auth/google_oauth2/callback`
+5. Copy the generated **Client ID** and **Client secret** into your `.env`:
+
+   ```bash
+   GOOGLE_CLIENT_ID=...
+   GOOGLE_CLIENT_SECRET=...
+   ```
+
+The app boots fine with these left blank; the Google flow simply stays
+disabled until they are set.
+
 ## Project tracking
 
 [JIRA board](https://86santiago.atlassian.net/jira/software/projects/SCRUM/boards/1)
