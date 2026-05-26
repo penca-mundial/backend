@@ -36,6 +36,9 @@ gem "image_processing", "~> 1.2"
 gem "blueprinter"
 gem "oj"
 
+# Audit log of model changes (enabled per-model later)
+gem "paper_trail"
+
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 gem "rack-cors"
 
