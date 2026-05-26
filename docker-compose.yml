@@ -1,0 +1,52 @@
+# Local development stack: Postgres + Mailcatcher + Rails.
+# Bring it up with: docker compose up
+#
+#   * API           -> http://localhost:3000
+#   * Mailcatcher   -> http://localhost:1080 (SMTP on 1025)
+#   * Postgres      -> localhost:5432 (user/password/db: penca)
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: penca
+      POSTGRES_PASSWORD: penca
+      POSTGRES_DB: penca_development
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U penca"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mailcatcher:
+    image: dockage/mailcatcher:0.9.0
+    ports:
+      - "1080:1080" # web UI
+      - "1025:1025" # SMTP
+
+  app:
+    build:
+      context: .
+      target: development
+    command: ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]
+    environment:
+      RAILS_ENV: development
+      # DATABASE_URL is the source of truth for the DB connection. Inside the
+      # compose network the database host is the `db` service, not localhost.
+      DATABASE_URL: postgres://penca:penca@db:5432/penca_development
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/rails
+      - bundle:/usr/local/bundle
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  bundle:
