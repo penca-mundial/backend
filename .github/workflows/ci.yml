@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: penca
+          POSTGRES_PASSWORD: penca
+          POSTGRES_DB: penca_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://penca:penca@localhost:5432/penca_test
+      SECRET_KEY_BASE: dummy_for_ci
+      ADMIN_EMAILS: admin@test.com
+      FOOTBALL_DATA_API_KEY: stubbed
+      RESEND_API_KEY: stubbed
+      FRONTEND_URL: http://localhost:5173
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Setup database
+        run: bin/rails db:create db:schema:load
+      - name: Run RSpec
+        run: bundle exec rspec
+      - name: Run Rubocop
+        run: bundle exec rubocop --parallel
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Brakeman (SAST)
+        run: bundle exec brakeman --no-pager
+      - name: Bundle audit
+        run: bundle exec bundle-audit check --update
