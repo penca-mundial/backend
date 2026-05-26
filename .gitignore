@@ -49,3 +49,7 @@
 
 # Node (if any tooling sneaks in)
 node_modules/
+
+# Ignore key files for decrypting credentials and more.
+/config/*.key
+
