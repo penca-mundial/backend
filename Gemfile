@@ -39,6 +39,10 @@ group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
 
+  # RSpec test framework and FactoryBot fixtures replacement (generators run in dev)
+  gem "rspec-rails"
+  gem "factory_bot_rails"
+
   # Audits gems for known security defects (use config/bundler-audit.yml to ignore issues)
   gem "bundler-audit", require: false
 
@@ -51,4 +55,13 @@ group :development, :test do
   gem "rubocop-rails-omakase", require: false
   gem "rubocop-performance", require: false
   gem "rubocop-rspec", require: false
+end
+
+group :test do
+  # Fake data, HTTP stubbing, DB cleanup, model matchers, and coverage.
+  gem "faker"
+  gem "webmock"
+  gem "database_cleaner-active_record"
+  gem "shoulda-matchers"
+  gem "simplecov", require: false
 end
