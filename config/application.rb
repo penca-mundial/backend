@@ -45,5 +45,10 @@ module Backend
     # frontend's responsibility.
     config.time_zone = "UTC"
     config.active_record.default_timezone = :utc
+
+    # api_only excludes cookie/session middleware, but Devise (via Warden) needs
+    # cookie-backed sessions. Add cookies here; the session store itself is
+    # configured in config/initializers/session_store.rb.
+    config.middleware.use ActionDispatch::Cookies
   end
 end
