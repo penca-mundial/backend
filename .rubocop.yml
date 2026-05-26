@@ -22,3 +22,13 @@ AllCops:
 Layout/LineLength:
   Enabled: true
   Max: 120
+
+# Specs routinely set up a scenario and assert several related things; these
+# defaults are stricter than how we write tests.
+RSpec/ExampleLength:
+  Enabled: false
+RSpec/MultipleExpectations:
+  Enabled: false
+# The `expect(...).to receive` mocking style is fine; don't force spies.
+RSpec/MessageSpies:
+  Enabled: false
