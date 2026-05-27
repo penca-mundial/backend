@@ -1,0 +1,40 @@
+# Render Blueprint (Infrastructure-as-Code). Connect this repo as a Blueprint in
+# Render; pushes to `main` then auto-deploy. See "Deploying to Render" in the
+# README for the one-time setup. The Dockerfile's final stage is the production
+# image, which is what Render builds.
+services:
+  - type: web
+    name: penca-backend
+    runtime: docker
+    branch: main
+    region: oregon
+    plan: free # upgrade to "starter" before June 11, 2026
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      # solid_queue runs inside Puma, so no separate worker service is needed.
+      - key: SOLID_QUEUE_IN_PUMA
+        value: "true"
+      # Secrets / per-environment values — set these in the Render dashboard.
+      - key: RAILS_MASTER_KEY
+        sync: false
+      - key: DATABASE_URL # Neon Postgres connection string
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: FOOTBALL_DATA_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

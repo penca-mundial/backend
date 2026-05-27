@@ -34,7 +34,27 @@ docker compose exec app bundle exec rubocop
 
 ## Deployment
 
-Pushes to `main` auto-deploy to Render. See `render.yaml`.
+The backend deploys to Render via the `render.yaml` Blueprint. Pushes to `main`
+auto-deploy.
+
+### Connecting the repo to Render (one-time)
+
+1. In the [Render dashboard](https://dashboard.render.com/), choose **New →
+   Blueprint** and select this repository. Render reads `render.yaml` and creates
+   the `penca-backend` web service (Docker, production stage of the Dockerfile).
+2. Provision the database in [Neon](https://neon.tech/) and copy its connection
+   string.
+3. Set the environment variables marked `sync: false` in the service's
+   **Environment** tab:
+   - `RAILS_MASTER_KEY` — contents of `config/master.key`
+   - `DATABASE_URL` — the Neon connection string
+   - `ADMIN_EMAILS`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+     `FOOTBALL_DATA_API_KEY`, `RESEND_API_KEY`, `CORS_ORIGINS`, `FRONTEND_URL`
+4. Trigger the first deploy. The Docker entrypoint runs `db:prepare` (creating
+   the schema, including the Solid Queue/Cache tables) before booting.
+5. Once, from the Render **Shell**, seed reference data: `bin/rails db:seed`.
+
+Health check: `GET /api/v1/health`.
 
 ## Environment variables
 
