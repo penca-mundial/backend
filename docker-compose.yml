@@ -38,6 +38,9 @@ services:
       # DATABASE_URL is the source of truth for the DB connection. Inside the
       # compose network the database host is the `db` service, not localhost.
       DATABASE_URL: postgres://penca:penca@db:5432/penca_development
+      # Mailcatcher is reachable as the `mailcatcher` service inside the network.
+      SMTP_ADDRESS: mailcatcher
+      SMTP_PORT: "1025"
     ports:
       - "3000:3000"
     volumes:

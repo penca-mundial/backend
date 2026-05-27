@@ -45,6 +45,9 @@ gem "rack-attack"
 # Pagination for API collections
 gem "kaminari"
 
+# Transactional email via Resend (production delivery method)
+gem "resend"
+
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 gem "rack-cors"
 
