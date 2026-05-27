@@ -39,6 +39,9 @@ gem "oj"
 # Audit log of model changes (enabled per-model later)
 gem "paper_trail"
 
+# HTTP-layer rate limiting / abuse protection
+gem "rack-attack"
+
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 gem "rack-cors"
 

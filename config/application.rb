@@ -53,5 +53,8 @@ module Backend
 
     # Background jobs run on Solid Queue (Postgres-backed) in every environment.
     config.active_job.queue_adapter = :solid_queue
+
+    # HTTP-layer rate limiting (rules in config/initializers/rack_attack.rb).
+    config.middleware.use Rack::Attack
   end
 end
