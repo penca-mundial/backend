@@ -42,6 +42,9 @@ gem "paper_trail"
 # HTTP-layer rate limiting / abuse protection
 gem "rack-attack"
 
+# Pagination for API collections
+gem "kaminari"
+
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 gem "rack-cors"
 
