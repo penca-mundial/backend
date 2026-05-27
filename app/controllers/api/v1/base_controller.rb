@@ -4,11 +4,16 @@ module Api
     # rescue/formatting, and pagination.
     class BaseController < ApplicationController
       include ActionController::RequestForgeryProtection
+      include Authenticatable
 
       # Cookie-based auth needs CSRF protection. :null_session empties the
       # session on a forged request instead of raising. The OmniAuth callback
       # controller (Phase 2) skips this via `skip_forgery_protection`.
       protect_from_forgery with: :null_session
+
+      # Authenticated, non-banned user required by default; public controllers
+      # opt out with `skip_before_action :require_user!`.
+      before_action :require_user!
 
       rescue_from ActiveRecord::RecordNotFound, with: :handle_record_not_found
       rescue_from ActiveRecord::RecordInvalid, with: :handle_record_invalid

@@ -12,6 +12,9 @@ end
 module Api
   module V1
     class ProbesController < BaseController
+      # These probes exercise error handling, not auth.
+      skip_before_action :require_user!
+
       def record_not_found
         raise ActiveRecord::RecordNotFound
       end
