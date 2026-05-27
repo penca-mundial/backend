@@ -32,6 +32,14 @@ Rails.application.configure do
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false
 
+  # Deliver mail to Mailcatcher over SMTP (UI at http://localhost:1080). The
+  # host is `mailcatcher` inside docker-compose and localhost otherwise.
+  config.action_mailer.delivery_method = :smtp
+  config.action_mailer.smtp_settings = {
+    address: ENV.fetch("SMTP_ADDRESS", "localhost"),
+    port: ENV.fetch("SMTP_PORT", 1025).to_i
+  }
+
   # Make template changes take effect immediately.
   config.action_mailer.perform_caching = false
 
