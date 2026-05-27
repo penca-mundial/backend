@@ -46,6 +46,12 @@ module Backend
     config.time_zone = "UTC"
     config.active_record.default_timezone = :utc
 
+    # User-facing strings are Spanish by default; English is the fallback for any
+    # missing key (e.g. framework translations).
+    config.i18n.available_locales = %i[es en]
+    config.i18n.default_locale = :es
+    config.i18n.fallbacks = [ :en ]
+
     # api_only excludes cookie/session middleware, but Devise (via Warden) needs
     # cookie-backed sessions. Add cookies here; the session store itself is
     # configured in config/initializers/session_store.rb.

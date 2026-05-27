@@ -1,0 +1,16 @@
+# Spanish translations — the default locale. User-facing strings live here.
+es:
+  errors:
+    not_found: "Recurso no encontrado."
+    standard_error: "Ocurrió un error inesperado."
+    unauthorized: "Necesitás iniciar sesión para continuar."
+    forbidden: "No tenés permisos para esta acción."
+    # Keys referenced by controllers, concerns, and services.
+    record_not_found: "Recurso no encontrado."
+    validation_failed: "Los datos enviados no son válidos."
+    unauthenticated: "Necesitás iniciar sesión para continuar."
+    account_banned: "Tu cuenta fue suspendida."
+    admin_required: "No tenés permisos para esta acción."
+  services:
+    errors:
+      record_not_found: "Recurso no encontrado."
