@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_27_120014) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_27_120015) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -109,6 +109,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_120014) do
     t.index ["match_id"], name: "index_predictions_on_match_id"
     t.index ["predicted_advancing_team_id"], name: "index_predictions_on_predicted_advancing_team_id"
     t.index ["user_id", "match_id"], name: "index_predictions_on_user_id_and_match_id", unique: true
+  end
+
+  create_table "ranking_snapshots", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "group_id"
+    t.integer "points", null: false
+    t.integer "rank_position", null: false
+    t.datetime "snapshot_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["group_id"], name: "index_ranking_snapshots_on_group_id"
+    t.index ["snapshot_at", "group_id", "rank_position"], name: "index_ranking_snapshots_on_snapshot_group_rank"
+    t.index ["user_id", "snapshot_at"], name: "index_ranking_snapshots_on_user_id_and_snapshot_at"
   end
 
   create_table "scoring_rules", force: :cascade do |t|
@@ -376,6 +389,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_120014) do
   add_foreign_key "predictions", "matches"
   add_foreign_key "predictions", "teams", column: "predicted_advancing_team_id"
   add_foreign_key "predictions", "users"
+  add_foreign_key "ranking_snapshots", "groups"
+  add_foreign_key "ranking_snapshots", "users"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_failed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
