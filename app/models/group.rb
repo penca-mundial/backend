@@ -7,6 +7,8 @@ class Group < ApplicationRecord
   MAX_MEMBERSHIPS = 500
   CODE_FORMAT = /\A[A-Z0-9]{8}\z/
 
+  has_paper_trail
+
   belongs_to :owner, class_name: "User"
 
   has_many :memberships, class_name: "GroupMembership", inverse_of: :group

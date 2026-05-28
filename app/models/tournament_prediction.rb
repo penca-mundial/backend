@@ -3,6 +3,8 @@
 class TournamentPrediction < ApplicationRecord
   PODIUM_SPOTS = %i[champion runner_up third_place fourth_place].freeze
 
+  has_paper_trail
+
   belongs_to :user
   belongs_to :tournament
   belongs_to :champion,     class_name: "Team",   optional: true
