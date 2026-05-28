@@ -9,6 +9,8 @@ class ScoringRule < ApplicationRecord
 
   enum :rule_type, RULE_TYPES.index_with(&:itself)
 
+  has_paper_trail
+
   validates :rule_type, presence: true, uniqueness: true
   validates :points, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
 

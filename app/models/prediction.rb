@@ -3,6 +3,8 @@
 class Prediction < ApplicationRecord
   LOCK_THRESHOLD = 1.minute
 
+  has_paper_trail
+
   belongs_to :user
   belongs_to :match
   belongs_to :predicted_advancing_team, class_name: "Team", optional: true

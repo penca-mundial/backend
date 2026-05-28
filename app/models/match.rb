@@ -6,6 +6,8 @@ class Match < ApplicationRecord
     group_stage round_of_32 round_of_16 quarter_final semi_final third_place final
   ].freeze
 
+  has_paper_trail
+
   belongs_to :tournament
   belongs_to :home_team, class_name: "Team"
   belongs_to :away_team, class_name: "Team"

@@ -6,6 +6,8 @@ class PhaseMultiplier < ApplicationRecord
 
   enum :phase, PHASES.index_with(&:itself)
 
+  has_paper_trail
+
   validates :phase, presence: true, uniqueness: true
   validates :multiplier, numericality: { greater_than: 0 }
 

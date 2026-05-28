@@ -11,6 +11,10 @@ class User < ApplicationRecord
          :validatable, :confirmable, :omniauthable, :pwned_password,
          omniauth_providers: [ :google_oauth2 ]
 
+  # Only sensitive role/state changes are audited; routine profile edits
+  # (username, password resets, oauth tokens, etc.) stay out of the log.
+  has_paper_trail only: [ :admin, :banned_at ]
+
   validates :username,
             presence: true,
             format: { with: USERNAME_FORMAT },
