@@ -101,4 +101,78 @@ RSpec.describe Match, type: :model do
       expect(match.original_kickoff_at).to be_within(1.second).of(kickoff)
     end
   end
+
+  describe "bracket progression" do
+    it "exposes the next-round match via #feeds_into" do
+      final = create(:match, :final)
+      semi  = create(:match, :semi_final,
+                     tournament: final.tournament,
+                     feeds_into: final, feeds_into_slot: "home")
+
+      expect(semi.feeds_into).to eq(final)
+    end
+
+    it "exposes the feeder matches via #fed_by" do
+      final  = create(:match, :final)
+      semi_a = create(:match, :semi_final,
+                      tournament: final.tournament,
+                      feeds_into: final, feeds_into_slot: "home")
+      semi_b = create(:match, :semi_final,
+                      tournament: final.tournament,
+                      feeds_into: final, feeds_into_slot: "away")
+
+      expect(final.fed_by).to contain_exactly(semi_a, semi_b)
+    end
+
+    it "rejects a final match that has feeds_into set" do
+      next_round = create(:match, :semi_final)
+      bad_final  = build(:match, :final,
+                         tournament: next_round.tournament,
+                         feeds_into: next_round, feeds_into_slot: "home")
+
+      expect(bad_final).not_to be_valid
+      expect(bad_final.errors[:feeds_into_match_id]).to be_present
+    end
+
+    it "rejects feeds_into without feeds_into_slot" do
+      final = create(:match, :final)
+      semi  = build(:match, :semi_final,
+                    tournament: final.tournament, feeds_into: final)
+
+      expect(semi).not_to be_valid
+      expect(semi.errors[:feeds_into_slot]).to be_present
+    end
+
+    it "is valid when both feeds_into and feeds_into_slot are set" do
+      final = create(:match, :final)
+      semi  = build(:match, :semi_final,
+                    tournament: final.tournament,
+                    feeds_into: final, feeds_into_slot: "home")
+
+      expect(semi).to be_valid
+    end
+
+    it "preloads the self-referential association without N+1" do
+      tournament = create(:tournament)
+      final = create(:match, :final, tournament: tournament)
+      2.times do |i|
+        create(:match, :semi_final,
+               tournament: tournament,
+               feeds_into: final,
+               feeds_into_slot: i.zero? ? "home" : "away")
+      end
+
+      query_count = 0
+      counter = lambda do |_name, _started, _finished, _id, payload|
+        query_count += 1 unless %w[SCHEMA TRANSACTION].include?(payload[:name])
+      end
+
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+        described_class.where(tournament: tournament).includes(:feeds_into).each(&:feeds_into)
+      end
+
+      # 1 query loads matches + 1 preloads feeds_into → 2 total, regardless of N.
+      expect(query_count).to be <= 2
+    end
+  end
 end
