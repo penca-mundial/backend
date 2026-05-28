@@ -40,3 +40,8 @@ es:
             predicted_advancing_team_id:
               required: "es obligatorio en partidos de eliminación"
               not_a_participant: "debe ser uno de los equipos del partido"
+        tournament_prediction:
+          not_in_tournament: "no pertenece al torneo"
+          attributes:
+            base:
+              duplicate_podium: "los cuatro puestos del podio deben ser equipos distintos"

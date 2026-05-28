@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_27_120009) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_27_120010) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -244,6 +244,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_120009) do
     t.index ["tournament_id"], name: "index_teams_on_tournament_id"
   end
 
+  create_table "tournament_predictions", force: :cascade do |t|
+    t.bigint "champion_id"
+    t.datetime "created_at", null: false
+    t.bigint "fourth_place_id"
+    t.datetime "locked_at"
+    t.bigint "runner_up_id"
+    t.bigint "third_place_id"
+    t.bigint "top_scorer_id"
+    t.bigint "tournament_id", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["champion_id"], name: "index_tournament_predictions_on_champion_id"
+    t.index ["fourth_place_id"], name: "index_tournament_predictions_on_fourth_place_id"
+    t.index ["runner_up_id"], name: "index_tournament_predictions_on_runner_up_id"
+    t.index ["third_place_id"], name: "index_tournament_predictions_on_third_place_id"
+    t.index ["top_scorer_id"], name: "index_tournament_predictions_on_top_scorer_id"
+    t.index ["tournament_id"], name: "index_tournament_predictions_on_tournament_id"
+    t.index ["user_id", "tournament_id"], name: "index_tournament_predictions_on_user_id_and_tournament_id", unique: true
+  end
+
   create_table "tournaments", force: :cascade do |t|
     t.bigint "champion_id"
     t.datetime "created_at", null: false
@@ -318,6 +338,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_120009) do
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "teams", "tournaments"
+  add_foreign_key "tournament_predictions", "players", column: "top_scorer_id"
+  add_foreign_key "tournament_predictions", "teams", column: "champion_id"
+  add_foreign_key "tournament_predictions", "teams", column: "fourth_place_id"
+  add_foreign_key "tournament_predictions", "teams", column: "runner_up_id"
+  add_foreign_key "tournament_predictions", "teams", column: "third_place_id"
+  add_foreign_key "tournament_predictions", "tournaments"
+  add_foreign_key "tournament_predictions", "users"
   add_foreign_key "tournaments", "players", column: "top_scorer_id"
   add_foreign_key "tournaments", "teams", column: "champion_id"
   add_foreign_key "tournaments", "teams", column: "fourth_place_id"

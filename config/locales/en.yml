@@ -41,3 +41,8 @@ en:
             predicted_advancing_team_id:
               required: "is required for knockout matches"
               not_a_participant: "must be one of the teams playing the match"
+        tournament_prediction:
+          not_in_tournament: "does not belong to the tournament"
+          attributes:
+            base:
+              duplicate_podium: "the four podium spots must be distinct teams"
