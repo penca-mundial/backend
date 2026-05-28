@@ -1,10 +1,6 @@
 # frozen_string_literal: true
 
 class User < ApplicationRecord
-  # Lowercase letters, digits and underscore, 3–20 chars. Usernames are stored
-  # lowercase (see #normalize_username), so the format check forbids uppercase.
-  USERNAME_FORMAT = /\A[a-z0-9_]{3,20}\z/
-
   # :pwned_password is the module exposed by devise-pwned_password; it rejects
   # passwords found in the Have I Been Pwned breach corpus.
   devise :database_authenticatable, :registerable, :recoverable, :rememberable,
@@ -15,9 +11,11 @@ class User < ApplicationRecord
   # (username, password resets, oauth tokens, etc.) stay out of the log.
   has_paper_trail only: [ :admin, :banned_at ]
 
+  # Usernames are stored lowercase (see #normalize_username); the shared
+  # UsernameFormatValidator enforces the [a-z0-9_]{3,20} shape.
   validates :username,
             presence: true,
-            format: { with: USERNAME_FORMAT },
+            username_format: true,
             uniqueness: { case_sensitive: false }
   validate :password_contains_digit
 
