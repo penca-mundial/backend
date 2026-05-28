@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_27_120012) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_27_120014) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -81,6 +81,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_120012) do
     t.datetime "updated_at", null: false
     t.index ["external_id"], name: "index_players_on_external_id", unique: true
     t.index ["team_id"], name: "index_players_on_team_id"
+  end
+
+  create_table "prediction_scores", force: :cascade do |t|
+    t.jsonb "breakdown", default: {}, null: false
+    t.datetime "computed_at", null: false
+    t.datetime "created_at", null: false
+    t.decimal "multiplier", precision: 4, scale: 2, default: "1.0", null: false
+    t.integer "points_advance", default: 0, null: false
+    t.integer "points_result", default: 0, null: false
+    t.bigint "prediction_id", null: false
+    t.integer "total_points", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["computed_at"], name: "index_prediction_scores_on_computed_at"
+    t.index ["prediction_id"], name: "index_prediction_scores_on_prediction_id", unique: true
   end
 
   create_table "predictions", force: :cascade do |t|
@@ -260,6 +274,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_120012) do
     t.index ["tournament_id"], name: "index_teams_on_tournament_id"
   end
 
+  create_table "tournament_prediction_scores", force: :cascade do |t|
+    t.datetime "computed_at", null: false
+    t.datetime "created_at", null: false
+    t.integer "points_champion", default: 0, null: false
+    t.integer "points_fourth", default: 0, null: false
+    t.integer "points_runner_up", default: 0, null: false
+    t.integer "points_third", default: 0, null: false
+    t.integer "points_top_scorer", default: 0, null: false
+    t.integer "total_points", default: 0, null: false
+    t.bigint "tournament_prediction_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tournament_prediction_id"], name: "index_tournament_prediction_scores_on_tournament_prediction_id", unique: true
+  end
+
   create_table "tournament_predictions", force: :cascade do |t|
     t.bigint "champion_id"
     t.datetime "created_at", null: false
@@ -344,6 +372,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_120012) do
   add_foreign_key "matches", "teams", column: "home_team_id"
   add_foreign_key "matches", "tournaments"
   add_foreign_key "players", "teams"
+  add_foreign_key "prediction_scores", "predictions"
   add_foreign_key "predictions", "matches"
   add_foreign_key "predictions", "teams", column: "predicted_advancing_team_id"
   add_foreign_key "predictions", "users"
@@ -354,6 +383,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_120012) do
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "teams", "tournaments"
+  add_foreign_key "tournament_prediction_scores", "tournament_predictions"
   add_foreign_key "tournament_predictions", "players", column: "top_scorer_id"
   add_foreign_key "tournament_predictions", "teams", column: "champion_id"
   add_foreign_key "tournament_predictions", "teams", column: "fourth_place_id"
