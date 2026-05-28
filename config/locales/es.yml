@@ -26,3 +26,12 @@ es:
             advancing_team_id:
               not_a_participant: "debe ser uno de los equipos del partido"
               not_in_group_stage: "no se permite en la fase de grupos"
+        group:
+          attributes:
+            base:
+              too_many_owned_groups: "no podés tener más de 3 grupos activos"
+        group_membership:
+          attributes:
+            base:
+              group_full: "el grupo alcanzó el máximo de integrantes"
+              cannot_leave_general_pool: "no se puede abandonar la liga general"
