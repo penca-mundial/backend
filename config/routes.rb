@@ -19,7 +19,9 @@ Rails.application.routes.draw do
 
       # Authentication: cookie-based session, Devise-backed.
       namespace :auth do
-        post "signup", to: "registrations#create"
+        post   "signup", to: "registrations#create"
+        post   "login",  to: "sessions#create"
+        delete "logout", to: "sessions#destroy"
       end
     end
   end
