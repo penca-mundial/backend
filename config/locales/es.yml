@@ -14,3 +14,10 @@ es:
   services:
     errors:
       record_not_found: "Recurso no encontrado."
+  activerecord:
+    errors:
+      models:
+        user:
+          attributes:
+            password:
+              missing_digit: "debe contener al menos un número"
