@@ -12,11 +12,13 @@ class User < ApplicationRecord
   has_paper_trail only: [ :admin, :banned_at ]
 
   # Usernames are stored lowercase (see #normalize_username); the shared
-  # UsernameFormatValidator enforces the [a-z0-9_]{3,20} shape.
+  # UsernameFormatValidator enforces the [a-z0-9_]{3,20} shape. Presence is
+  # required for every user EXCEPT a freshly-provisioned OAuth user, who
+  # picks their handle in the onboarding flow right after the callback.
+  validates :username, presence: true, unless: :oauth_pending_username?
   validates :username,
-            presence: true,
             username_format: true,
-            uniqueness: { case_sensitive: false }
+            uniqueness: { case_sensitive: false, allow_blank: true }
   validate :password_contains_digit
 
   before_validation :normalize_username
@@ -48,6 +50,10 @@ class User < ApplicationRecord
 
   def normalize_username
     self.username = username.downcase if username.present?
+  end
+
+  def oauth_pending_username?
+    provider.present? && username.blank?
   end
 
   def promote_admin_from_env
