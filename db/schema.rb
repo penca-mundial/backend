@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_27_120010) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_27_120012) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -65,6 +65,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_120010) do
     t.check_constraint "home_team_id <> away_team_id", name: "matches_home_and_away_differ"
   end
 
+  create_table "phase_multipliers", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.decimal "multiplier", precision: 4, scale: 2, default: "1.0", null: false
+    t.string "phase", null: false
+    t.datetime "updated_at", null: false
+    t.index ["phase"], name: "index_phase_multipliers_on_phase", unique: true
+  end
+
   create_table "players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "external_id"
@@ -87,6 +95,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_120010) do
     t.index ["match_id"], name: "index_predictions_on_match_id"
     t.index ["predicted_advancing_team_id"], name: "index_predictions_on_predicted_advancing_team_id"
     t.index ["user_id", "match_id"], name: "index_predictions_on_user_id_and_match_id", unique: true
+  end
+
+  create_table "scoring_rules", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "points", default: 0, null: false
+    t.string "rule_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["rule_type"], name: "index_scoring_rules_on_rule_type", unique: true
   end
 
   create_table "solid_cable_messages", force: :cascade do |t|
