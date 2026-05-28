@@ -11,10 +11,11 @@ Rails.application.routes.draw do
   # email link lands on the same code path as the /api/v1/auth/confirmation
   # endpoints below.
   devise_for :users,
-             skip: %i[sessions registrations unlocks omniauth_callbacks],
+             skip: %i[sessions registrations unlocks],
              controllers: {
-               confirmations: "api/v1/auth/confirmations",
-               passwords:     "api/v1/auth/passwords"
+               confirmations:      "api/v1/auth/confirmations",
+               passwords:          "api/v1/auth/passwords",
+               omniauth_callbacks: "api/v1/auth/omniauth_callbacks"
              }
 
   # All application endpoints live under /api/v1. Feature routes are added to

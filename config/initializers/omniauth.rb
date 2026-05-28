@@ -5,6 +5,9 @@
 # protects the OAuth flow against CSRF. We only allow POST accordingly.
 OmniAuth.config.logger = Rails.logger
 OmniAuth.config.allowed_request_methods = %i[post]
+# Devise mounts the OmniAuth routes at /users/auth/:provider, so OmniAuth's
+# own path-matching middleware needs to look there too (default is /auth).
+OmniAuth.config.path_prefix = "/users/auth"
 
 # Don't raise on the request phase in development when credentials are blank;
 # log the failure and let the (Phase 2) callback controller handle it.
