@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_27_120015) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_27_120016) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -43,9 +43,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_120015) do
     t.bigint "advancing_team_id"
     t.integer "away_score", default: 0, null: false
     t.bigint "away_team_id", null: false
+    t.integer "bracket_position"
     t.datetime "created_at", null: false
     t.jsonb "events_log", default: [], null: false
     t.string "external_id", null: false
+    t.bigint "feeds_into_match_id"
+    t.integer "feeds_into_slot"
     t.integer "home_score", default: 0, null: false
     t.bigint "home_team_id", null: false
     t.datetime "kickoff_at", null: false
@@ -57,6 +60,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_120015) do
     t.index ["advancing_team_id"], name: "index_matches_on_advancing_team_id"
     t.index ["away_team_id"], name: "index_matches_on_away_team_id"
     t.index ["external_id"], name: "index_matches_on_external_id", unique: true
+    t.index ["feeds_into_match_id"], name: "index_matches_on_feeds_into_match_id"
     t.index ["home_team_id"], name: "index_matches_on_home_team_id"
     t.index ["kickoff_at"], name: "index_matches_on_kickoff_at"
     t.index ["status"], name: "index_matches_on_status"
@@ -380,6 +384,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_120015) do
   add_foreign_key "group_memberships", "groups"
   add_foreign_key "group_memberships", "users"
   add_foreign_key "groups", "users", column: "owner_id"
+  add_foreign_key "matches", "matches", column: "feeds_into_match_id"
   add_foreign_key "matches", "teams", column: "advancing_team_id"
   add_foreign_key "matches", "teams", column: "away_team_id"
   add_foreign_key "matches", "teams", column: "home_team_id"
