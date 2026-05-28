@@ -1,9 +1,18 @@
-# This file should ensure the existence of records required to run the application in every environment (production,
-# development, test). The code here should be idempotent so that it can be executed at any point in every environment.
-# The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
-#
-# Example:
-#
-#   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
-#     MovieGenre.find_or_create_by!(name: genre_name)
-#   end
+# frozen_string_literal: true
+
+# Idempotent baseline data needed to run the app on a fresh DB. The order is
+# load-bearing: teams need the tournament; the general pool needs the system
+# user. Every step uses find_or_create_by! so re-running is a no-op.
+require_relative "seeds/system_user"
+require_relative "seeds/tournament"
+require_relative "seeds/teams"
+require_relative "seeds/scoring_rules"
+require_relative "seeds/phase_multipliers"
+require_relative "seeds/general_pool"
+
+Seeds::SystemUser.call
+Seeds::Tournament.call
+Seeds::Teams.call
+Seeds::ScoringRules.call
+Seeds::PhaseMultipliers.call
+Seeds::GeneralPool.call

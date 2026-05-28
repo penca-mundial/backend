@@ -1,0 +1,54 @@
+---
+# Qualified (or expected-to-qualify) teams for the FIFA World Cup 2026, as of
+# project start. The list is intentionally static here; the Phase 3
+# SyncFixtures service will reconcile external_id and flag_url against
+# football-data.org once the real draw is available. Update this file as more
+# teams qualify.
+- { name: "Argentina",      code3: "ARG", external_id: "wc2026-arg" }
+- { name: "France",         code3: "FRA", external_id: "wc2026-fra" }
+- { name: "Spain",          code3: "ESP", external_id: "wc2026-esp" }
+- { name: "England",        code3: "ENG", external_id: "wc2026-eng" }
+- { name: "Brazil",         code3: "BRA", external_id: "wc2026-bra" }
+- { name: "Portugal",       code3: "POR", external_id: "wc2026-por" }
+- { name: "Netherlands",    code3: "NED", external_id: "wc2026-ned" }
+- { name: "Belgium",        code3: "BEL", external_id: "wc2026-bel" }
+- { name: "Croatia",        code3: "CRO", external_id: "wc2026-cro" }
+- { name: "United States",  code3: "USA", external_id: "wc2026-usa" }
+- { name: "Italy",          code3: "ITA", external_id: "wc2026-ita" }
+- { name: "Mexico",         code3: "MEX", external_id: "wc2026-mex" }
+- { name: "Germany",        code3: "GER", external_id: "wc2026-ger" }
+- { name: "Uruguay",        code3: "URU", external_id: "wc2026-uru" }
+- { name: "Colombia",       code3: "COL", external_id: "wc2026-col" }
+- { name: "Switzerland",    code3: "SUI", external_id: "wc2026-sui" }
+- { name: "Japan",          code3: "JPN", external_id: "wc2026-jpn" }
+- { name: "Senegal",        code3: "SEN", external_id: "wc2026-sen" }
+- { name: "Iran",           code3: "IRN", external_id: "wc2026-irn" }
+- { name: "Denmark",        code3: "DEN", external_id: "wc2026-den" }
+- { name: "South Korea",    code3: "KOR", external_id: "wc2026-kor" }
+- { name: "Australia",      code3: "AUS", external_id: "wc2026-aus" }
+- { name: "Morocco",        code3: "MAR", external_id: "wc2026-mar" }
+- { name: "Ukraine",        code3: "UKR", external_id: "wc2026-ukr" }
+- { name: "Austria",        code3: "AUT", external_id: "wc2026-aut" }
+- { name: "Sweden",         code3: "SWE", external_id: "wc2026-swe" }
+- { name: "Wales",          code3: "WAL", external_id: "wc2026-wal" }
+- { name: "Poland",         code3: "POL", external_id: "wc2026-pol" }
+- { name: "Serbia",         code3: "SRB", external_id: "wc2026-srb" }
+- { name: "Hungary",        code3: "HUN", external_id: "wc2026-hun" }
+- { name: "Türkiye",        code3: "TUR", external_id: "wc2026-tur" }
+- { name: "Czech Republic", code3: "CZE", external_id: "wc2026-cze" }
+- { name: "Egypt",          code3: "EGY", external_id: "wc2026-egy" }
+- { name: "Algeria",        code3: "ALG", external_id: "wc2026-alg" }
+- { name: "Nigeria",        code3: "NGA", external_id: "wc2026-nga" }
+- { name: "Cameroon",       code3: "CMR", external_id: "wc2026-cmr" }
+- { name: "Tunisia",        code3: "TUN", external_id: "wc2026-tun" }
+- { name: "Ivory Coast",    code3: "CIV", external_id: "wc2026-civ" }
+- { name: "Ghana",          code3: "GHA", external_id: "wc2026-gha" }
+- { name: "Mali",           code3: "MLI", external_id: "wc2026-mli" }
+- { name: "Ecuador",        code3: "ECU", external_id: "wc2026-ecu" }
+- { name: "Peru",           code3: "PER", external_id: "wc2026-per" }
+- { name: "Chile",          code3: "CHI", external_id: "wc2026-chi" }
+- { name: "Paraguay",       code3: "PAR", external_id: "wc2026-par" }
+- { name: "Costa Rica",     code3: "CRC", external_id: "wc2026-crc" }
+- { name: "Panama",         code3: "PAN", external_id: "wc2026-pan" }
+- { name: "Jamaica",        code3: "JAM", external_id: "wc2026-jam" }
+- { name: "Canada",         code3: "CAN", external_id: "wc2026-can" }
