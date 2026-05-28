@@ -10,9 +10,34 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_27_120006) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_27_120008) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "group_memberships", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "group_id", null: false
+    t.datetime "joined_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["group_id", "user_id"], name: "index_group_memberships_on_group_id_and_user_id", unique: true
+    t.index ["user_id"], name: "index_group_memberships_on_user_id"
+  end
+
+  create_table "groups", force: :cascade do |t|
+    t.string "code", limit: 8, null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.text "description"
+    t.boolean "is_general_pool", default: false, null: false
+    t.string "name", null: false
+    t.bigint "owner_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_groups_on_code", unique: true
+    t.index ["deleted_at"], name: "index_groups_on_deleted_at"
+    t.index ["is_general_pool"], name: "index_groups_on_single_general_pool", unique: true, where: "(is_general_pool = true)"
+    t.index ["owner_id"], name: "index_groups_on_owner_id"
+  end
 
   create_table "matches", force: :cascade do |t|
     t.bigint "advancing_team_id"
@@ -261,6 +286,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_120006) do
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
   end
 
+  add_foreign_key "group_memberships", "groups"
+  add_foreign_key "group_memberships", "users"
+  add_foreign_key "groups", "users", column: "owner_id"
   add_foreign_key "matches", "teams", column: "advancing_team_id"
   add_foreign_key "matches", "teams", column: "away_team_id"
   add_foreign_key "matches", "teams", column: "home_team_id"

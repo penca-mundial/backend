@@ -27,3 +27,12 @@ en:
             advancing_team_id:
               not_a_participant: "must be one of the teams playing the match"
               not_in_group_stage: "is not allowed during the group stage"
+        group:
+          attributes:
+            base:
+              too_many_owned_groups: "cannot own more than 3 active groups"
+        group_membership:
+          attributes:
+            base:
+              group_full: "has reached its maximum number of members"
+              cannot_leave_general_pool: "cannot be removed from the general pool"
