@@ -28,14 +28,14 @@ RSpec.describe "AdminAuthorizable", type: :request do
   after(:all) { Rails.application.reload_routes! } # rubocop:disable RSpec/BeforeAfterAll
 
   it "returns 403 for a regular user" do
-    login_as(FakeUser.new(id: 1, admin: false, banned_at: nil), scope: :user)
+    login_as(create(:user), scope: :user)
     get "/api/v1/admin_probes/show"
     expect(response).to have_http_status(:forbidden)
     expect(response.parsed_body.dig("error", "code")).to eq("forbidden")
   end
 
   it "allows an admin user" do
-    login_as(FakeUser.new(id: 2, admin: true, banned_at: nil), scope: :user)
+    login_as(create(:user, :admin), scope: :user)
     get "/api/v1/admin_probes/show"
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body).to eq("ok" => true)
