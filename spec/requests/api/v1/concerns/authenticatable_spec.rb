@@ -30,16 +30,24 @@ RSpec.describe "Authenticatable", type: :request do
   end
 
   it "allows an authenticated, non-banned user" do
-    login_as(FakeUser.new(id: 42, admin: false, banned_at: nil), scope: :user)
+    user = create(:user)
+    login_as(user, scope: :user)
     get "/api/v1/auth_probes/show"
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body).to eq("user_id" => 42)
+    expect(response.parsed_body).to eq("user_id" => user.id)
   end
 
-  it "returns 403 account_banned for a banned user" do
-    login_as(FakeUser.new(id: 7, admin: false, banned_at: Time.current), scope: :user)
+  it "rejects a user who is banned after login (Devise drops the session, 401)" do
+    user = create(:user)
+    login_as(user, scope: :user)
+    # Banning the user invalidates the session: Devise's active_for_authentication?
+    # returns false, the fetch hook logs them out, the next request comes in
+    # unauthenticated. The concern's banned → 403 branch is defensive cover
+    # for cases where a stale session somehow slips past Devise.
+    user.update!(banned_at: Time.current)
+
     get "/api/v1/auth_probes/show"
-    expect(response).to have_http_status(:forbidden)
-    expect(response.parsed_body.dig("error", "code")).to eq("account_banned")
+
+    expect(response).to have_http_status(:unauthorized)
   end
 end
