@@ -36,3 +36,8 @@ en:
             base:
               group_full: "has reached its maximum number of members"
               cannot_leave_general_pool: "cannot be removed from the general pool"
+        prediction:
+          attributes:
+            predicted_advancing_team_id:
+              required: "is required for knockout matches"
+              not_a_participant: "must be one of the teams playing the match"
