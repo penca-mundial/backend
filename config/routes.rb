@@ -7,9 +7,12 @@ Rails.application.routes.draw do
 
   # Register the Devise mapping for User. We mount only the :confirmations
   # routes so the default mailer (which renders user_confirmation_url) has
-  # the URL helper it needs; the rest of the auth surface is served by the
-  # /api/v1/auth/* controllers below.
-  devise_for :users, skip: %i[sessions registrations passwords unlocks omniauth_callbacks]
+  # the URL helper it needs, and route them to our own controller so the
+  # email link lands on the same code path as the /api/v1/auth/confirmation
+  # endpoints below.
+  devise_for :users,
+             skip: %i[sessions registrations passwords unlocks omniauth_callbacks],
+             controllers: { confirmations: "api/v1/auth/confirmations" }
 
   # All application endpoints live under /api/v1. Feature routes are added to
   # this namespace in later phases.
@@ -19,9 +22,11 @@ Rails.application.routes.draw do
 
       # Authentication: cookie-based session, Devise-backed.
       namespace :auth do
-        post   "signup", to: "registrations#create"
-        post   "login",  to: "sessions#create"
-        delete "logout", to: "sessions#destroy"
+        post   "signup",       to: "registrations#create"
+        post   "login",        to: "sessions#create"
+        delete "logout",       to: "sessions#destroy"
+        get    "confirmation", to: "confirmations#show"
+        post   "confirmation", to: "confirmations#create"
       end
     end
   end
