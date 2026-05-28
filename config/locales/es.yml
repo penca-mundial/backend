@@ -21,3 +21,8 @@ es:
           attributes:
             password:
               missing_digit: "debe contener al menos un número"
+        match:
+          attributes:
+            advancing_team_id:
+              not_a_participant: "debe ser uno de los equipos del partido"
+              not_in_group_stage: "no se permite en la fase de grupos"

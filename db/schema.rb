@@ -10,9 +10,35 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_27_120005) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_27_120006) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "matches", force: :cascade do |t|
+    t.bigint "advancing_team_id"
+    t.integer "away_score", default: 0, null: false
+    t.bigint "away_team_id", null: false
+    t.datetime "created_at", null: false
+    t.jsonb "events_log", default: [], null: false
+    t.string "external_id", null: false
+    t.integer "home_score", default: 0, null: false
+    t.bigint "home_team_id", null: false
+    t.datetime "kickoff_at", null: false
+    t.datetime "original_kickoff_at", null: false
+    t.string "phase", null: false
+    t.string "status", default: "scheduled", null: false
+    t.bigint "tournament_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["advancing_team_id"], name: "index_matches_on_advancing_team_id"
+    t.index ["away_team_id"], name: "index_matches_on_away_team_id"
+    t.index ["external_id"], name: "index_matches_on_external_id", unique: true
+    t.index ["home_team_id"], name: "index_matches_on_home_team_id"
+    t.index ["kickoff_at"], name: "index_matches_on_kickoff_at"
+    t.index ["status"], name: "index_matches_on_status"
+    t.index ["tournament_id", "phase"], name: "index_matches_on_tournament_id_and_phase"
+    t.index ["tournament_id"], name: "index_matches_on_tournament_id"
+    t.check_constraint "home_team_id <> away_team_id", name: "matches_home_and_away_differ"
+  end
 
   create_table "players", force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -235,6 +261,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_120005) do
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
   end
 
+  add_foreign_key "matches", "teams", column: "advancing_team_id"
+  add_foreign_key "matches", "teams", column: "away_team_id"
+  add_foreign_key "matches", "teams", column: "home_team_id"
+  add_foreign_key "matches", "tournaments"
   add_foreign_key "players", "teams"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
