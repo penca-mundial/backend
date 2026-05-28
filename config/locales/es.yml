@@ -35,3 +35,8 @@ es:
             base:
               group_full: "el grupo alcanzó el máximo de integrantes"
               cannot_leave_general_pool: "no se puede abandonar la liga general"
+        prediction:
+          attributes:
+            predicted_advancing_team_id:
+              required: "es obligatorio en partidos de eliminación"
+              not_a_participant: "debe ser uno de los equipos del partido"
