@@ -244,3 +244,22 @@ If `gh pr create --fill` would otherwise auto-include such text (e.g. from the c
 3. The JIRA reference: `Refs SCRUM-NNN`.
 
 Nothing else. No tool attribution. No emoji branding. No "Made with ❤️ by ...".
+
+## Local dev on macOS — Solid Queue + Puma
+
+In production (Linux on Render), `SOLID_QUEUE_IN_PUMA=true` is the default — the worker runs inside Puma to save costs on the Starter plan.
+
+On macOS local dev, this combination crashes Puma at boot with `+[__NSCFConstantString initialize] may have been in progress when fork() was called`. It's an Apple-specific restriction on Objective-C frameworks across `fork()`.
+
+**Solution for local dev**:
+- Keep `SOLID_QUEUE_IN_PUMA=false` in your local `.env`.
+- Run two processes in separate terminals:
+```bash
+  # Terminal 1
+  bin/rails s
+
+  # Terminal 2
+  bin/jobs start
+```
+
+The plugin in `config/puma.rb` checks `ENV["SOLID_QUEUE_IN_PUMA"] == "true"` strictly, so `false` actually disables it.
