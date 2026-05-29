@@ -11,7 +11,7 @@ module Seeds
       round_of_16:   2.0,
       quarter_final: 2.5,
       semi_final:    3.0,
-      third_place:   1.0,
+      third_place:   3.5,
       final:         4.0
     }.freeze
 
