@@ -6,14 +6,9 @@ module Api
       # POST /api/v1/auth/login — sign in via cookie session.
       # DELETE /api/v1/auth/logout — clear the cookie session.
       class SessionsController < BaseController
-        # CSRF doesn't protect login (the attacker would need the credentials
-        # themselves) or logout (the worst case is being logged out). Skipping
-        # the check here is what lets warden actually persist to the session
-        # instead of writing to the null store.
-        skip_forgery_protection
-
         # Login is the way IN; logout from a still-valid session is also expected
-        # to succeed without prior authentication.
+        # to succeed without prior authentication. (CSRF token verification is
+        # already skipped for the whole namespace via ApiCsrfHandling.)
         skip_before_action :require_user!
 
         def create

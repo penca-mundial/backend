@@ -60,4 +60,24 @@ RSpec.describe "Api::V1::Auth::ConfirmationsController", type: :request do
       expect(response).to have_http_status(:accepted)
     end
   end
+
+  # Confirms the namespace-wide CSRF skip (ApiCsrfHandling in BaseController)
+  # covers this controller too. Test env disables forgery protection, so flip
+  # it on to match dev/prod.
+  describe "with forgery protection enabled (dev/prod parity)" do
+    around do |example|
+      original = Api::V1::BaseController.allow_forgery_protection
+      Api::V1::BaseController.allow_forgery_protection = true
+      example.run
+      Api::V1::BaseController.allow_forgery_protection = original
+    end
+
+    it "accepts the resend request without an authenticity_token instead of raising" do
+      user = create(:user, :unconfirmed, email: "pending@example.com")
+
+      post "/api/v1/auth/confirmation", params: { email: user.email }, headers: headers
+
+      expect(response).to have_http_status(:accepted)
+    end
+  end
 end
