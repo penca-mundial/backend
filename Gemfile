@@ -90,3 +90,5 @@ group :test do
   gem "shoulda-matchers"
   gem "simplecov", require: false
 end
+
+gem "dotenv-rails", "~> 3.2", :groups => [:development, :test]
