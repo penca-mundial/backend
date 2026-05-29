@@ -3,13 +3,12 @@ module Api
     # Base class for every /api/v1 controller. Centralises CSRF handling, error
     # rescue/formatting, and pagination.
     class BaseController < ApplicationController
-      include ActionController::RequestForgeryProtection
+      # CSRF policy for the whole namespace. We are API-only, so the
+      # HTML-form authenticity_token mechanism is skipped here; protection
+      # comes from SameSite cookies + the CORS allowlist. See the concern for
+      # the full rationale.
+      include ApiCsrfHandling
       include Authenticatable
-
-      # Cookie-based auth needs CSRF protection. :null_session empties the
-      # session on a forged request instead of raising. The OmniAuth callback
-      # controller (Phase 2) skips this via `skip_forgery_protection`.
-      protect_from_forgery with: :null_session
 
       # Authenticated, non-banned user required by default; public controllers
       # opt out with `skip_before_action :require_user!`.

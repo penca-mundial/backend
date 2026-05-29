@@ -97,4 +97,24 @@ RSpec.describe "Api::V1::Auth::SessionsController", type: :request do
       expect(response).to have_http_status(:no_content)
     end
   end
+
+  # Confirms the namespace-wide CSRF skip (ApiCsrfHandling in BaseController)
+  # covers this controller too, not just Registrations. Test env disables
+  # forgery protection, so flip it on to match dev/prod.
+  describe "with forgery protection enabled (dev/prod parity)" do
+    around do |example|
+      original = Api::V1::BaseController.allow_forgery_protection
+      Api::V1::BaseController.allow_forgery_protection = true
+      example.run
+      Api::V1::BaseController.allow_forgery_protection = original
+    end
+
+    it "logs in without an authenticity_token instead of raising" do
+      post "/api/v1/auth/login",
+           params: { email: user.email, password: password },
+           headers: headers
+
+      expect(response).to have_http_status(:ok)
+    end
+  end
 end

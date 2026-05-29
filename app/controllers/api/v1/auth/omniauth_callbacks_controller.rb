@@ -10,7 +10,6 @@ module Api
       # endpoint (#failure) covers strategy errors.
       class OmniauthCallbacksController < BaseController
         skip_before_action :require_user!
-        skip_forgery_protection
 
         def google_oauth2
           result = ::Auth::GoogleOauthCallback.call(auth_hash: request.env["omniauth.auth"])

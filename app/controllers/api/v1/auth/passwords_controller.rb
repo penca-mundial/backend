@@ -7,7 +7,6 @@ module Api
       # PUT  /api/v1/auth/password { reset_password_token, password } — set new password.
       class PasswordsController < BaseController
         skip_before_action :require_user!
-        skip_forgery_protection
 
         # Request a reset link. Always responds 202 so the caller can't tell
         # whether the email exists.

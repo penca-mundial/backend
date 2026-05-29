@@ -10,10 +10,9 @@ module Api
       #   email; returns 202 regardless of whether the email exists so the
       #   response can't be used to enumerate registered addresses.
       class ConfirmationsController < BaseController
-        # Public endpoints. CSRF would otherwise null the session/cookie on
-        # POST, which doesn't matter here, but matches the auth namespace.
+        # Public endpoints. (CSRF token verification is skipped namespace-wide
+        # via ApiCsrfHandling in BaseController.)
         skip_before_action :require_user!
-        skip_forgery_protection
 
         def show
           result = ::Auth::ConfirmEmail.call(token: params[:confirmation_token])
