@@ -35,6 +35,11 @@ Rails.application.routes.draw do
         put    "password",     to: "passwords#update"
         get    "me",           to: "me#show"
       end
+
+      # Self-service profile editing. /me lives under the auth-protected
+      # default — see BaseController#require_user!.
+      patch "users/me",          to: "users#update"
+      post  "users/me/username", to: "users#claim_username"
     end
   end
 end
