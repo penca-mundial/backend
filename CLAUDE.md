@@ -287,3 +287,14 @@ Day-to-day work (no gem changes) just needs:
 docker compose up -d
 docker compose logs -f app    # optional, watch logs
 ```
+
+## OAuth CSRF — request phase vs callback phase
+
+`omniauth-rails_csrf_protection` is loaded and protects OmniAuth routes. We intentionally disable its `request_validation_phase` (initialized in `config/initializers/omniauth.rb`) because:
+
+- Cross-origin SPA clients cannot read the Rails CSRF cookie (httpOnly + same-origin policy).
+- The request phase (`POST /users/auth/<provider>`) only generates the redirect URL to the provider — no state mutation.
+- The callback phase (`GET|POST /users/auth/<provider>/callback`) IS protected by the OAuth `state` parameter echoed by the provider, which we leave as default.
+- For broader CSRF protection in our cookie-session API: SameSite=Lax + CORS allowlist (rack-cors) + Origin header verification.
+
+If you add a new OAuth provider, no extra CSRF config is needed — this is global.
