@@ -24,6 +24,13 @@ class User < ApplicationRecord
   before_validation :normalize_username
   before_save :promote_admin_from_env
 
+  # General pool enrolment: fires when a user becomes confirmed — either
+  # because Google OAuth created them already confirmed, or because they
+  # clicked the confirmation link. The system account is excluded; it exists
+  # only to satisfy owner_id FKs and must not appear in any group.
+  after_commit :enqueue_general_pool_enrolment, on: %i[create update],
+               if: :general_pool_enrolment_due?
+
   # Users who have not been banned.
   scope :active, -> { where(banned_at: nil) }
 
@@ -76,5 +83,18 @@ class User < ApplicationRecord
     return if password.match?(/\d/)
 
     errors.add(:password, :missing_digit)
+  end
+
+  def general_pool_enrolment_due?
+    return false if system?
+    return false if confirmed_at.blank?
+
+    # On create the change set always names confirmed_at if it was passed in;
+    # on update we only care when confirmed_at itself just changed.
+    saved_change_to_confirmed_at? || previously_new_record?
+  end
+
+  def enqueue_general_pool_enrolment
+    AddUserToGeneralPoolJob.perform_later(id)
   end
 end
