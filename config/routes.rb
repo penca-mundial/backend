@@ -33,6 +33,7 @@ Rails.application.routes.draw do
         post   "confirmation", to: "confirmations#create"
         post   "password",     to: "passwords#create"
         put    "password",     to: "passwords#update"
+        get    "me",           to: "me#show"
       end
     end
   end
