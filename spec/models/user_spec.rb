@@ -139,4 +139,48 @@ RSpec.describe User, type: :model do
       expect(build(:user, :unconfirmed)).not_to be_active_for_authentication
     end
   end
+
+  describe "general pool enrolment" do
+    include ActiveJob::TestHelper
+
+    around do |example|
+      ActiveJob::Base.queue_adapter = :test
+      example.run
+    end
+
+    it "enqueues AddUserToGeneralPoolJob when a user is confirmed for the first time" do
+      user = create(:user, :unconfirmed)
+
+      expect do
+        user.update!(confirmed_at: Time.current)
+      end.to have_enqueued_job(AddUserToGeneralPoolJob).with(user.id)
+    end
+
+    it "enqueues AddUserToGeneralPoolJob on create for an already-confirmed user (Google flow)" do
+      expect do
+        create(:user, :oauth)
+      end.to have_enqueued_job(AddUserToGeneralPoolJob)
+    end
+
+    it "does not enqueue for an unconfirmed new user" do
+      expect do
+        create(:user, :unconfirmed)
+      end.not_to have_enqueued_job(AddUserToGeneralPoolJob)
+    end
+
+    it "does not enqueue for the system account" do
+      expect do
+        create(:user, :system)
+      end.not_to have_enqueued_job(AddUserToGeneralPoolJob)
+    end
+
+    it "does not enqueue on an unrelated update" do
+      user = create(:user)
+      clear_enqueued_jobs
+
+      expect do
+        user.update!(timezone: "America/Montevideo")
+      end.not_to have_enqueued_job(AddUserToGeneralPoolJob)
+    end
+  end
 end
