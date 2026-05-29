@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Reinstalls gems in the bundle volume after Gemfile changes.
+# Usage: bin/setup-deps
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+echo "==> Installing gems in container..."
+docker compose run --rm --no-deps app bundle install
+
+echo "==> Restarting app service..."
+docker compose restart app
+
+echo "==> Done. Tail logs with: docker compose logs -f app"

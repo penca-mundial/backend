@@ -263,3 +263,27 @@ On macOS local dev, this combination crashes Puma at boot with `+[__NSCFConstant
 ```
 
 The plugin in `config/puma.rb` checks `ENV["SOLID_QUEUE_IN_PUMA"] == "true"` strictly, so `false` actually disables it.
+
+## Docker development — gem installation
+
+The `app` service mounts a Docker volume on `/usr/local/bundle` to cache gems between builds. This means:
+
+- After **first clone** or after `docker compose down -v`: you need to install gems explicitly:
+```bash
+  docker compose run --rm --no-deps app bundle install
+  docker compose restart app
+```
+
+- After **adding/removing a gem** in Gemfile (or running `bundle add X`):
+```bash
+  docker compose run --rm --no-deps app bundle install
+  docker compose restart app
+```
+
+- After **rebuilding the image** (`docker compose build --no-cache app`): the rebuild does NOT populate the volume. You still need the explicit `bundle install` above.
+
+Day-to-day work (no gem changes) just needs:
+```bash
+docker compose up -d
+docker compose logs -f app    # optional, watch logs
+```
