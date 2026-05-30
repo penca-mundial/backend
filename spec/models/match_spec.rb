@@ -175,4 +175,35 @@ RSpec.describe Match, type: :model do
       expect(query_count).to be <= 2
     end
   end
+
+  describe "prediction-lock scheduling" do
+    include ActiveJob::TestHelper
+
+    it "schedules a MatchLockJob a minute before kickoff on create" do
+      kickoff = 2.days.from_now.change(usec: 0)
+
+      expect { create(:match, kickoff_at: kickoff) }
+        .to have_enqueued_job(MatchLockJob).at(kickoff - 1.minute)
+    end
+
+    it "does not schedule a lock job for a match created already finished" do
+      expect { create(:match, :finished) }.not_to have_enqueued_job(MatchLockJob)
+    end
+
+    it "reschedules when a scheduled match's kickoff moves" do
+      match = create(:match, kickoff_at: 2.days.from_now)
+      clear_enqueued_jobs
+      new_kickoff = 4.days.from_now.change(usec: 0)
+
+      expect { match.update!(kickoff_at: new_kickoff) }
+        .to have_enqueued_job(MatchLockJob).at(new_kickoff - 1.minute)
+    end
+
+    it "does not reschedule on an unrelated update" do
+      match = create(:match)
+      clear_enqueued_jobs
+
+      expect { match.update!(home_score: 3) }.not_to have_enqueued_job(MatchLockJob)
+    end
+  end
 end

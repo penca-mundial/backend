@@ -45,6 +45,13 @@ class Match < ApplicationRecord
   # original_kickoff_at records the first scheduled time and is immutable once set.
   before_validation :set_original_kickoff_at, on: :create
 
+  # Schedule the prediction-lock backstop for kickoff, and reschedule it
+  # whenever the kickoff of a still-scheduled match moves (e.g. a postponement
+  # picked up by FootballData::SyncMatch). One after_commit covering both create
+  # and update — two callbacks pointing at the same method would be deduped by
+  # Rails, dropping the create case. The cancel-and-requeue lives in the service.
+  after_commit :schedule_prediction_lock, on: %i[create update], if: :lock_scheduling_due?
+
   scope :live,      -> { status_live }
   scope :scheduled, -> { status_scheduled }
   scope :finished,  -> { status_finished }
@@ -53,6 +60,18 @@ class Match < ApplicationRecord
 
   def set_original_kickoff_at
     self.original_kickoff_at = kickoff_at
+  end
+
+  def schedule_prediction_lock
+    Matches::ScheduleLockJob.call(match: self)
+  end
+
+  # On create: schedule the first lock. On update: reschedule only when the
+  # kickoff actually moved. Never schedule for a match that isn't scheduled.
+  def lock_scheduling_due?
+    return false unless status_scheduled?
+
+    previously_new_record? || saved_change_to_kickoff_at?
   end
 
   def advancing_team_is_a_participant
