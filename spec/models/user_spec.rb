@@ -3,6 +3,16 @@
 require "rails_helper"
 
 RSpec.describe User, type: :model do
+  describe "associations" do
+    it { is_expected.to have_many(:memberships).class_name("GroupMembership").dependent(:destroy) }
+    it { is_expected.to have_many(:groups).through(:memberships) }
+    it { is_expected.to have_many(:owned_groups).class_name("Group").with_foreign_key(:owner_id).dependent(:destroy) }
+    it { is_expected.to have_many(:predictions).dependent(:destroy) }
+    it { is_expected.to have_many(:tournament_predictions).dependent(:destroy) }
+    it { is_expected.to have_many(:ranking_snapshots).dependent(:destroy) }
+    it { is_expected.to have_many(:prediction_scores).through(:predictions) }
+  end
+
   describe "validations" do
     it "is valid with the default factory attributes" do
       expect(build(:user)).to be_valid

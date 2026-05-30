@@ -9,6 +9,12 @@ class Prediction < ApplicationRecord
   belongs_to :match
   belongs_to :predicted_advancing_team, class_name: "Team", optional: true
 
+  # At most one score per prediction (enforced by a unique index on
+  # prediction_id), but modelled as has_many so User#prediction_scores can
+  # reach them through :predictions without a source override. The FK has no
+  # ON DELETE cascade, so dependent: :destroy clears scores with the prediction.
+  has_many :prediction_scores, dependent: :destroy
+
   validates :predicted_home_score, :predicted_away_score,
             numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 20 }
   validate :advancing_team_required_for_knockout

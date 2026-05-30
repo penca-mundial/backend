@@ -11,6 +11,20 @@ class User < ApplicationRecord
   # (username, password resets, oauth tokens, etc.) stay out of the log.
   has_paper_trail only: [ :admin, :banned_at ]
 
+  # Group membership: a user joins many groups through their memberships, and
+  # may own up to MAX_OWNED_GROUPS of them. The FKs have no ON DELETE cascade,
+  # so dependent: :destroy is what cleans these up when a user is removed.
+  has_many :memberships, class_name: "GroupMembership", dependent: :destroy
+  has_many :groups, through: :memberships
+  has_many :owned_groups, class_name: "Group", foreign_key: :owner_id, dependent: :destroy, inverse_of: :owner
+
+  # Predictions and their derived scores. prediction_scores is reached through
+  # predictions (see Prediction#prediction_scores).
+  has_many :predictions, dependent: :destroy
+  has_many :tournament_predictions, dependent: :destroy
+  has_many :ranking_snapshots, dependent: :destroy
+  has_many :prediction_scores, through: :predictions
+
   # Usernames are stored lowercase (see #normalize_username); the shared
   # UsernameFormatValidator enforces the [a-z0-9_]{3,20} shape. Presence is
   # required for every user EXCEPT a freshly-provisioned OAuth user, who
