@@ -27,11 +27,12 @@ RSpec.describe Memberships::AddToGeneralPool do
   end
 
   context "without a general pool" do
-    it "returns a failure result" do
-      result = described_class.call(user: user)
-
-      expect(result).to be_failure
-      expect(result.errors.join).to match(/[Gg]eneral pool/)
+    # The error inherits from Exception (not StandardError), so it escapes the
+    # Service base rescue and propagates to the caller instead of becoming a
+    # failed ServiceResult. This is what makes the job fail loudly.
+    it "raises GeneralPoolNotInitialized" do
+      expect { described_class.call(user: user) }
+        .to raise_error(Memberships::GeneralPoolNotInitialized, /general pool/i)
     end
   end
 end
