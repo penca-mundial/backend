@@ -51,6 +51,9 @@ gem "resend"
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 gem "rack-cors"
 
+# HTTP client for outbound API calls (football-data.org sync)
+gem "httparty"
+
 # Authentication, plus rejection of passwords found in known data breaches
 gem "devise"
 gem "devise-pwned_password"

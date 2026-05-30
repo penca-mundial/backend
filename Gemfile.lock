@@ -518,6 +518,7 @@ DEPENDENCIES
   dotenv-rails (~> 3.2)
   factory_bot_rails
   faker
+  httparty
   image_processing (~> 1.2)
   kamal
   kaminari
