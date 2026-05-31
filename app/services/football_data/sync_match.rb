@@ -42,6 +42,7 @@ module FootballData
 
       @match.kickoff_at = Time.zone.parse(data["utcDate"]) if data["utcDate"].present?
       @match.events_log = Array(data["goals"]) if data.key?("goals")
+      @match.last_synced_at = Time.current
     end
   end
 end

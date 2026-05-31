@@ -58,6 +58,17 @@ RSpec.describe FootballData::SyncMatch do
     end
   end
 
+  describe "sync bookkeeping" do
+    let(:match) { create(:match, external_id: "m-5", status: "scheduled", kickoff_at: 2.hours.from_now) }
+
+    it "stamps last_synced_at so the polling cadence can be tracked" do
+      stub_match("m-5", "status" => "SCHEDULED")
+
+      expect { described_class.call(match: match) }
+        .to change { match.reload.last_synced_at }.from(nil)
+    end
+  end
+
   describe "idempotency" do
     let(:match) { create(:match, external_id: "m-4", status: "live", kickoff_at: 1.hour.ago) }
 
