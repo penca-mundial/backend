@@ -9,13 +9,7 @@ class StandingBlueprint < Blueprinter::Base
   fields :group, :position, :played_games, :won, :draw, :lost,
          :goals_for, :goals_against, :goal_difference, :points, :form
 
-  field(:team) { |standing| StandingBlueprint.team_hash(standing.team) }
-
-  def self.team_hash(team)
-    return nil if team.nil?
-
-    { id: team.id, name: team.name, code3: team.code3, flag_url: team.flag_url }
-  end
+  association :team, blueprint: TeamBlueprint, view: :default
 
   # Group an already-ordered (group, position) collection into
   # { "A" => [row, row, ...], "B" => [...] }, preserving order both across groups
