@@ -25,8 +25,8 @@ RSpec.describe MatchLockJob do
       expect(predictions.first.reload.locked_at).to eq(locked_at)
     end
 
-    it "delegates to Matches::LockPredictions" do
-      expect(Matches::LockPredictions).to receive(:call).with(match: match).and_call_original
+    it "delegates to Predictions::LockPredictionsForMatch" do
+      expect(Predictions::LockPredictionsForMatch).to receive(:call).with(match: match).and_call_original
 
       described_class.perform_now(match.id)
     end
