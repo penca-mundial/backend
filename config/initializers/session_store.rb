@@ -8,7 +8,18 @@ Rails.application.config.session_store :cookie_store,
   expire_after: 30.days
 
 # api_only apps don't insert the session middleware, so add it explicitly using
-# the options configured above. (ActionDispatch::Cookies is added in
-# config/application.rb, since the session store depends on it.)
-Rails.application.config.middleware.use ActionDispatch::Session::CookieStore,
-  Rails.application.config.session_options
+# the options configured above.
+#
+# Ordering matters: cookies + session MUST run before Warden::Manager (inserted
+# by Devise during engine load) so the session is loaded before anything reads
+# Warden. Otherwise a middleware above the session store that touches
+# `env["warden"].user` (e.g. the Rack::Attack `predictions` throttle) makes
+# Warden fetch from an empty session and memoize a nil user for the rest of the
+# request — turning authenticated writes into spurious 401s. `insert_before`
+# resolves Warden::Manager because Devise registers it before config
+# initializers run; Cookies is inserted before the session store, which depends
+# on it.
+Rails.application.config.middleware.insert_before Warden::Manager,
+  ActionDispatch::Session::CookieStore, Rails.application.config.session_options
+Rails.application.config.middleware.insert_before ActionDispatch::Session::CookieStore,
+  ActionDispatch::Cookies

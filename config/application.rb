@@ -53,9 +53,10 @@ module Backend
     config.i18n.fallbacks = [ :en ]
 
     # api_only excludes cookie/session middleware, but Devise (via Warden) needs
-    # cookie-backed sessions. Add cookies here; the session store itself is
-    # configured in config/initializers/session_store.rb.
-    config.middleware.use ActionDispatch::Cookies
+    # cookie-backed sessions. Both ActionDispatch::Cookies and the session store
+    # are inserted before Warden::Manager in config/initializers/session_store.rb
+    # so the session is loaded before anything reads Warden (see the rationale
+    # there).
 
     # Background jobs run on Solid Queue (Postgres-backed) in every environment.
     config.active_job.queue_adapter = :solid_queue
