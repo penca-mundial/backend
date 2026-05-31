@@ -33,11 +33,13 @@ RSpec.describe FootballData::SyncFixtures do
       "matches" => [
         {
           "id" => 1001, "utcDate" => "2026-06-11T18:00:00Z", "status" => "SCHEDULED", "stage" => "GROUP_STAGE",
+          "group" => "GROUP_A",
           "homeTeam" => { "id" => 1 }, "awayTeam" => { "id" => 2 },
           "score" => { "fullTime" => { "home" => nil, "away" => nil } }
         },
         {
           "id" => 1002, "utcDate" => "2026-07-19T18:00:00Z", "status" => "FINISHED", "stage" => "FINAL",
+          "group" => nil,
           "homeTeam" => { "id" => 1 }, "awayTeam" => { "id" => 2 },
           "score" => { "fullTime" => { "home" => 3, "away" => 1 } }
         },
@@ -90,6 +92,20 @@ RSpec.describe FootballData::SyncFixtures do
 
     final = Match.find_by(external_id: "1002")
     expect(final).to have_attributes(status: "finished", phase: "final", home_score: 3, away_score: 1)
+  end
+
+  it "normalizes the group letter for group-stage matches and leaves knockout matches nil" do
+    result
+
+    expect(Match.find_by(external_id: "1001").group).to eq("A") # "GROUP_A" -> "A"
+    expect(Match.find_by(external_id: "1002").group).to be_nil  # knockout: no group
+  end
+
+  it "keeps the group stable across re-syncs (idempotent)" do
+    described_class.call
+    described_class.call
+
+    expect(Match.find_by(external_id: "1001").group).to eq("A")
   end
 
   it "refreshes the tournament info from the competition payload" do

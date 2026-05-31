@@ -38,6 +38,22 @@ RSpec.describe Match, type: :model do
     end
   end
 
+  describe "group" do
+    it "has a nullable group column that defaults to nil" do
+      expect(described_class.column_names).to include("group")
+      expect(build(:match).group).to be_nil
+    end
+
+    it "accepts a group letter and persists it" do
+      match = create(:match, group: "A")
+      expect(match.reload.group).to eq("A")
+    end
+
+    it "stays valid with a nil group (knockout matches)" do
+      expect(build(:match, :knockout, group: nil)).to be_valid
+    end
+  end
+
   describe "scopes" do
     it "filter matches by status" do
       scheduled = create(:match)
