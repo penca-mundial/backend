@@ -40,6 +40,11 @@ Rails.application.routes.draw do
       # default — see BaseController#require_user!.
       patch "users/me",          to: "users#update"
       post  "users/me/username", to: "users#claim_username"
+
+      # Match predictions (per-match score + knockout advancing team).
+      get    "predictions/me",  to: "predictions#index"
+      put    "predictions",     to: "predictions#upsert"
+      delete "predictions/:id", to: "predictions#destroy"
     end
   end
 end
