@@ -63,6 +63,9 @@ Rails.application.routes.draw do
 
       # Canonical "current" tournament (active -> upcoming -> most recent past).
       get "tournaments/current", to: "tournaments#current"
+
+      # Public teams index, scoped by ?tournament_id= (defaults to current).
+      get "teams", to: "teams#index"
     end
   end
 end

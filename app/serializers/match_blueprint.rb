@@ -9,12 +9,6 @@ class MatchBlueprint < Blueprinter::Base
   fields :external_id, :tournament_id, :kickoff_at, :status, :phase, :group,
          :minute, :home_score, :away_score, :advancing_team_id
 
-  field(:home_team) { |match| MatchBlueprint.team_hash(match.home_team) }
-  field(:away_team) { |match| MatchBlueprint.team_hash(match.away_team) }
-
-  def self.team_hash(team)
-    return nil if team.nil?
-
-    { id: team.id, name: team.name, code3: team.code3, flag_url: team.flag_url }
-  end
+  association :home_team, blueprint: TeamBlueprint, view: :default
+  association :away_team, blueprint: TeamBlueprint, view: :default
 end
