@@ -49,11 +49,27 @@ Controllers van bajo `app/controllers/api/v1/`. Todo endpoint público vive en `
 
 ```bash
 docker compose up                           # Levanta Postgres + mailcatcher + Rails
-bin/rails db:create db:migrate db:seed      # Setup DB
+bin/rails db:create db:migrate db:seed      # Setup DB (development)
 bin/rails s                                 # Server
-bin/rspec                                   # Tests
+docker compose exec app bundle exec rspec   # Tests
 bin/lint                                    # rubocop + brakeman + bundle-audit
 ```
+
+### Bases de datos: development y test SON SEPARADAS
+
+`development` usa `penca_development` (de `DATABASE_URL`); `test` usa una DB
+distinta, `penca_test`. `config/database.yml` resuelve la de test así: usa
+`TEST_DATABASE_URL` si está seteada, y si no, deriva el nombre desde
+`DATABASE_URL` reemplazando el último segmento por `penca_test`. Nunca corras
+los tests contra la DB de development (da `ActiveRecord::EnvironmentMismatchError`).
+
+Preparar la DB de test una vez (no la crea `db:seed`):
+
+```bash
+docker compose exec -e RAILS_ENV=test app bin/rails db:prepare
+```
+
+`bundle exec rspec` ya corre en `RAILS_ENV=test` y apunta solo a `penca_test`.
 
 ---
 

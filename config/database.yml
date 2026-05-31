@@ -1,9 +1,12 @@
 # PostgreSQL configuration.
 #
-# DATABASE_URL is the source of truth for the connection. In development and
-# test it falls back to a local connection when DATABASE_URL is unset, so the
-# app still boots without any env configuration. Under docker-compose the host
-# is the `db` service (see docker-compose.yml).
+# DATABASE_URL is the source of truth for the connection; under docker-compose
+# the host is the `db` service (see docker-compose.yml). Development and test
+# MUST use separate databases, so the test environment never reuses the
+# DATABASE_URL value directly: it prefers TEST_DATABASE_URL, and otherwise
+# derives the test DB from DATABASE_URL by swapping the database name for
+# penca_test (e.g. .../penca_development -> .../penca_test). Both fall back to a
+# local connection when nothing is set, so the app still boots bare.
 #
 # https://guides.rubyonrails.org/configuring.html#configuring-a-database
 default: &default
@@ -17,7 +20,7 @@ development:
 
 test:
   <<: *default
-  url: <%= ENV.fetch("DATABASE_URL", "postgres://localhost/penca_test") %>
+  url: <%= ENV.fetch("TEST_DATABASE_URL") { (ENV["DATABASE_URL"] || "postgres://localhost").sub(/\/[^\/]*$/, "/penca_test") } %>
 
 # Single database for everything (primary data plus the Solid Queue / Cache /
 # Cable tables). Connection comes from DATABASE_URL; the production deploy ticket

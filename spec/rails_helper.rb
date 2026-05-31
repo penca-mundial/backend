@@ -1,6 +1,10 @@
 # This file is copied to spec/ when you run 'rails generate rspec:install'
 require 'spec_helper'
-ENV['RAILS_ENV'] ||= 'test'
+# Force the test environment. We assign (not ||=) on purpose: under
+# docker-compose the container sets RAILS_ENV=development, and a ||= would
+# inherit it — running the whole suite against the development database with a
+# real cache store. The specs must always boot in test (penca_test, null_store).
+ENV['RAILS_ENV'] = 'test'
 require_relative '../config/environment'
 # Prevent database truncation if the environment is production
 abort("The Rails environment is running in production mode!") if Rails.env.production?
@@ -59,6 +63,12 @@ RSpec.configure do |config|
   # DatabaseCleaner: truncate once up front, then wrap each example in a
   # transaction that is rolled back afterwards.
   config.before(:suite) do
+    # Under docker-compose the database lives in the `db` container, so the
+    # connection URL has a non-local host that DatabaseCleaner's safeguard flags
+    # as "remote". It is safe to allow here: this file aborts above when
+    # RAILS_ENV is production, and config/database.yml always points the test
+    # environment at a dedicated penca_test database (never penca_development).
+    DatabaseCleaner.allow_remote_database_url = true
     DatabaseCleaner.clean_with(:truncation)
     DatabaseCleaner.strategy = :transaction
   end
