@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_28_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_31_000714) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -52,6 +52,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_28_010000) do
     t.integer "home_score", default: 0, null: false
     t.bigint "home_team_id", null: false
     t.datetime "kickoff_at", null: false
+    t.datetime "last_synced_at"
     t.datetime "original_kickoff_at", null: false
     t.string "phase", null: false
     t.string "status", default: "scheduled", null: false
@@ -63,6 +64,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_28_010000) do
     t.index ["feeds_into_match_id"], name: "index_matches_on_feeds_into_match_id"
     t.index ["home_team_id"], name: "index_matches_on_home_team_id"
     t.index ["kickoff_at"], name: "index_matches_on_kickoff_at"
+    t.index ["last_synced_at"], name: "index_matches_on_last_synced_at"
     t.index ["status"], name: "index_matches_on_status"
     t.index ["tournament_id", "phase"], name: "index_matches_on_tournament_id_and_phase"
     t.index ["tournament_id"], name: "index_matches_on_tournament_id"
