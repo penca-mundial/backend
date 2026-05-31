@@ -26,10 +26,26 @@ RSpec.describe "Rack::Attack", :rack_attack, type: :request do
   end
 
   describe "signup throttle (3 / hour by IP)" do
+    def signup
+      post "/api/v1/auth/signup", params: {}.to_json, headers: json_headers
+    end
+
     it "returns 429 on the 4th signup" do
-      4.times do
-        post "/api/v1/auth/signup", params: {}.to_json, headers: json_headers
+      4.times { signup }
+      expect(response).to have_http_status(:too_many_requests)
+    end
+
+    # A throttle configured for N requests must allow exactly N and trip on
+    # N+1 — i.e. count each request once. This fails if Rack::Attack is ever
+    # inserted into the middleware stack more than once and starts
+    # double-counting (see the "middleware stack" regression below).
+    it "allows the first 3 and throttles the 4th (counts each request once)" do
+      3.times do
+        signup
+        expect(response).not_to have_http_status(:too_many_requests)
       end
+
+      signup
       expect(response).to have_http_status(:too_many_requests)
     end
   end
@@ -42,5 +58,17 @@ RSpec.describe "Rack::Attack", :rack_attack, type: :request do
 
       expect(response).to have_http_status(:forbidden)
     end
+  end
+end
+
+# Structural regression guard: rack-attack's railtie already inserts
+# Rack::Attack, so the app must NOT add it manually as well. A second insertion
+# is redundant config (only rack-attack's `rack.attack.called` re-entry guard
+# stops it from double-counting throttles); this spec fails if the duplicate
+# ever comes back.
+RSpec.describe "Rack::Attack middleware stack", type: :request do
+  it "inserts Rack::Attack exactly once" do
+    count = Rails.application.middleware.middlewares.count { |m| m == Rack::Attack }
+    expect(count).to eq(1)
   end
 end

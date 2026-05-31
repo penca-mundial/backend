@@ -61,7 +61,9 @@ module Backend
     # Background jobs run on Solid Queue (Postgres-backed) in every environment.
     config.active_job.queue_adapter = :solid_queue
 
-    # HTTP-layer rate limiting (rules in config/initializers/rack_attack.rb).
-    config.middleware.use Rack::Attack
+    # HTTP-layer rate limiting: rack-attack's railtie inserts Rack::Attack into
+    # the middleware stack on its own, so we do not add it manually here (doing
+    # so would insert it twice and double-count every throttle). Rules live in
+    # config/initializers/rack_attack.rb.
   end
 end
