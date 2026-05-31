@@ -34,6 +34,24 @@ RSpec.describe "Api::V1::MatchesController", type: :request do
   describe "GET /api/v1/matches/:id" do
     let(:fixture) { create(:match, kickoff_at: 1.week.from_now) }
 
+    it "exposes the group field" do
+      grouped = create(:match, kickoff_at: 1.week.from_now, group: "C")
+
+      get "/api/v1/matches/#{grouped.id}", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include("group" => "C")
+    end
+
+    it "exposes the live minute field" do
+      in_play = create(:match, :live, kickoff_at: 1.hour.ago, minute: 67)
+
+      get "/api/v1/matches/#{in_play.id}", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include("minute" => 67)
+    end
+
     it "embeds my_prediction when authenticated" do
       create(:prediction, user: user, match: fixture, predicted_home_score: 2, predicted_away_score: 1)
       login_as(user, scope: :user)

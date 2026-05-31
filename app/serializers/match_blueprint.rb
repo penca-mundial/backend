@@ -6,8 +6,8 @@
 class MatchBlueprint < Blueprinter::Base
   identifier :id
 
-  fields :external_id, :tournament_id, :kickoff_at, :status, :phase,
-         :home_score, :away_score, :advancing_team_id
+  fields :external_id, :tournament_id, :kickoff_at, :status, :phase, :group,
+         :minute, :home_score, :away_score, :advancing_team_id
 
   field(:home_team) { |match| MatchBlueprint.team_hash(match.home_team) }
   field(:away_team) { |match| MatchBlueprint.team_hash(match.away_team) }

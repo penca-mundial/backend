@@ -126,10 +126,22 @@ module FootballData
         kickoff_at: Time.zone.parse(data["utcDate"]),
         status: STATUS_MAP.fetch(data["status"], "scheduled"),
         phase: PHASE_MAP.fetch(data["stage"], "group_stage"),
+        group: normalize_group(data["group"]),
         home_score: score["home"] || 0,
         away_score: score["away"] || 0
       )
       true
+    end
+
+    # Normalize the API's group identifier to a short token: "GROUP_A" -> "A",
+    # "Group A" -> "A", "A" -> "A". Returns nil when absent or empty (knockout
+    # matches have no group). The result is NOT constrained to A-L — whatever the
+    # upstream returns post-normalization is stored, so tournaments with a
+    # different number of groups or labels work without code changes.
+    def normalize_group(raw)
+      return nil if raw.blank?
+
+      raw.to_s.strip.sub(/\AGROUP[\s_]*/i, "").strip.presence
     end
 
     def team_for(external_id)

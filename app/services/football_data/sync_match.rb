@@ -47,9 +47,23 @@ module FootballData
       @match.home_score = score["home"] unless score["home"].nil?
       @match.away_score = score["away"] unless score["away"].nil?
 
+      @match.minute = live_minute(data)
       @match.kickoff_at = Time.zone.parse(data["utcDate"]) if data["utcDate"].present?
       @match.events_log = Array(data["goals"]) if data.key?("goals")
       @match.last_synced_at = Time.current
+    end
+
+    # Resolve the match minute from the live payload:
+    #   * scheduled       -> nil (a match that hasn't kicked off has no minute).
+    #   * minute present  -> mirror it (covers live, and a final minute such as
+    #                        90 / 90+ stamped on the finished payload).
+    #   * minute absent   -> keep the last synced value rather than clobbering a
+    #                        known final minute (some finished payloads drop it).
+    def live_minute(data)
+      return nil if @match.status_scheduled?
+      return data["minute"] if data.key?("minute")
+
+      @match.minute
     end
   end
 end

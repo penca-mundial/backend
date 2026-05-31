@@ -24,6 +24,45 @@ RSpec.describe FootballData::SyncMatch do
     end
   end
 
+  describe "minute" do
+    it "populates the minute for a live match from the API" do
+      match = create(:match, external_id: "min-1", status: "scheduled", kickoff_at: 1.hour.ago)
+      stub_match("min-1", "status" => "IN_PLAY", "minute" => 67)
+
+      described_class.call(match: match)
+
+      expect(match.reload).to have_attributes(status: "live", minute: 67)
+    end
+
+    it "leaves the minute nil for a still-scheduled match" do
+      match = create(:match, external_id: "min-2", status: "scheduled", kickoff_at: 2.hours.from_now)
+      stub_match("min-2", "status" => "SCHEDULED")
+
+      described_class.call(match: match)
+
+      expect(match.reload.minute).to be_nil
+    end
+
+    it "stores a final minute stamped on the finished payload" do
+      match = create(:match, external_id: "min-3", status: "live", kickoff_at: 1.hour.ago, minute: 88)
+      stub_match("min-3", "status" => "FINISHED", "minute" => 90,
+                          "score" => { "fullTime" => { "home" => 1, "away" => 0 } })
+
+      described_class.call(match: match)
+
+      expect(match.reload).to have_attributes(status: "finished", minute: 90)
+    end
+
+    it "keeps the last synced minute when a finished payload drops the field" do
+      match = create(:match, external_id: "min-4", status: "live", kickoff_at: 1.hour.ago, minute: 90)
+      stub_match("min-4", "status" => "FINISHED", "score" => { "fullTime" => { "home" => 2, "away" => 2 } })
+
+      described_class.call(match: match)
+
+      expect(match.reload).to have_attributes(status: "finished", minute: 90)
+    end
+  end
+
   describe "-> finished" do
     let(:match) { create(:match, external_id: "m-2", status: "live", kickoff_at: 1.hour.ago) }
 
