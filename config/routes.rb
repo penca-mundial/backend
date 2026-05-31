@@ -60,6 +60,9 @@ Rails.application.routes.draw do
       # Public group standings, scoped by ?tournament_id= (defaults to the first
       # tournament). Grouped by group letter, ordered by position.
       get "standings", to: "standings#index"
+
+      # Canonical "current" tournament (active -> upcoming -> most recent past).
+      get "tournaments/current", to: "tournaments#current"
     end
   end
 end
