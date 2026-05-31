@@ -30,5 +30,36 @@ RSpec.describe "football_data rake tasks" do # rubocop:disable RSpec/DescribeCla
       expect { Rake::Task["football_data:bootstrap"].invoke }
         .to raise_error(SystemExit, /football-data bootstrap failed/)
     end
+
+    # End-to-end (real SyncFixtures, stubbed HTTP) over the scenario that
+    # motivated SCRUM-252: a seeded team already exists, and bootstrap is run
+    # twice. Neither run may raise PG::UniqueViolation.
+    context "when run twice against a seeded DB" do
+      let(:base) { "https://api.football-data.org/v4" }
+      let(:json) { { "Content-Type" => "application/json" } }
+      let(:team_payload) do
+        { "id" => 1, "name" => "Argentina", "tla" => "ARG", "crest" => "https://c/arg.png", "squad" => [] }
+      end
+
+      before do
+        tournament = create(:tournament)
+        create(:team, tournament: tournament, code3: "ARG", external_id: "wc2026-arg", name: "Argentina")
+
+        stub_request(:get, "#{base}/competitions/WC")
+          .to_return(status: 200, body: { "id" => 2000, "name" => "FIFA World Cup" }.to_json, headers: json)
+        stub_request(:get, "#{base}/competitions/WC/teams")
+          .to_return(status: 200, body: { "teams" => [ team_payload ] }.to_json, headers: json)
+        stub_request(:get, "#{base}/competitions/WC/matches")
+          .to_return(status: 200, body: { "matches" => [] }.to_json, headers: json)
+      end
+
+      it "is a no-op the second time, with no duplicate teams" do
+        expect { Rake::Task["football_data:bootstrap"].invoke }.not_to raise_error
+        Rake::Task["football_data:bootstrap"].reenable
+        expect { Rake::Task["football_data:bootstrap"].invoke }.not_to raise_error
+
+        expect(Team.where(code3: "ARG").count).to eq(1)
+      end
+    end
   end
 end

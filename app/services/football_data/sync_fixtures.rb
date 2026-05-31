@@ -78,14 +78,19 @@ module FootballData
       [ teams, players ]
     end
 
+    # Reconcile by code3 (the FIFA key shared between db:seed and the API), NOT
+    # by external_id: seeded teams carry a placeholder external_id
+    # ("wc2026-<code>"), so matching on it would miss the row and try to insert a
+    # duplicate, violating the (tournament_id, code3) unique index. We always
+    # overwrite external_id (placeholder -> football-data numeric id) and the
+    # API-owned flag_url, but preserve the seed's curated (Spanish) name; a team
+    # created fresh (bootstrap without seed) takes the API name.
     def upsert_team(data)
-      team = Team.find_or_initialize_by(external_id: data["id"].to_s)
-      team.update!(
-        tournament: tournament,
-        name: data["name"],
-        code3: data["tla"],
-        flag_url: data["crest"]
-      )
+      team = Team.find_or_initialize_by(tournament: tournament, code3: data["tla"])
+      team.name = data["name"] if team.new_record?
+      team.external_id = data["id"].to_s
+      team.flag_url = data["crest"]
+      team.save!
       team
     end
 
