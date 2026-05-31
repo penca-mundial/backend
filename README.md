@@ -25,6 +25,19 @@ API runs at http://localhost:3000
 
 Mailcatcher UI for dev emails: http://localhost:1080
 
+## Football data
+
+On a fresh deploy, populate the World Cup teams, players and matches from
+football-data.org (set `FOOTBALL_DATA_API_KEY` first):
+
+```bash
+docker compose exec app bin/rails football_data:bootstrap
+```
+
+It prints the number of teams, players and matches synced. The task is
+idempotent — re-running updates existing rows instead of duplicating them.
+Live and upcoming matches are then kept fresh automatically by `MatchSyncJob`.
+
 ## Tests
 
 ```bash
