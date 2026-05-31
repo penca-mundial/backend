@@ -54,6 +54,18 @@ RSpec.describe Match, type: :model do
     end
   end
 
+  describe "minute" do
+    it "has a nullable minute column that defaults to nil" do
+      expect(described_class.column_names).to include("minute")
+      expect(build(:match).minute).to be_nil
+    end
+
+    it "accepts a minute and persists it" do
+      match = create(:match, :live, minute: 67)
+      expect(match.reload.minute).to eq(67)
+    end
+  end
+
   describe "scopes" do
     it "filter matches by status" do
       scheduled = create(:match)
