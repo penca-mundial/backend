@@ -20,6 +20,7 @@ RSpec.describe Tournament, type: :model do
     it { is_expected.to belong_to(:fourth_place).class_name("Team").optional }
     it { is_expected.to belong_to(:top_scorer).class_name("Player").optional }
     it { is_expected.to have_many(:teams) }
+    it { is_expected.to have_many(:standings) }
     it { is_expected.to have_many(:players).through(:teams) }
 
     # Match arrives in a later ticket; assert the reflection without loading it.
@@ -43,5 +44,15 @@ RSpec.describe Tournament, type: :model do
     tournament.update!(champion: team)
 
     expect(tournament.reload.champion).to eq(team)
+  end
+
+  describe ".active" do
+    it "includes tournaments currently within their playing window and excludes others" do
+      current = create(:tournament, starts_at: 1.day.ago, ends_at: 1.day.from_now)
+      create(:tournament, starts_at: 2.days.from_now, ends_at: 1.month.from_now) # not started
+      create(:tournament, starts_at: 1.month.ago, ends_at: 1.day.ago)            # already ended
+
+      expect(described_class.active).to contain_exactly(current)
+    end
   end
 end

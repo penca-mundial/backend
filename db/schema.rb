@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_31_000716) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_31_000718) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -283,6 +283,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_31_000716) do
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
+  create_table "standings", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "draw", default: 0, null: false
+    t.string "form"
+    t.integer "goal_difference", default: 0, null: false
+    t.integer "goals_against", default: 0, null: false
+    t.integer "goals_for", default: 0, null: false
+    t.string "group", null: false
+    t.integer "lost", default: 0, null: false
+    t.integer "played_games", default: 0, null: false
+    t.integer "points", default: 0, null: false
+    t.integer "position", null: false
+    t.bigint "team_id", null: false
+    t.bigint "tournament_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "won", default: 0, null: false
+    t.index ["team_id"], name: "index_standings_on_team_id"
+    t.index ["tournament_id", "group"], name: "index_standings_on_tournament_id_and_group"
+    t.index ["tournament_id", "team_id"], name: "index_standings_on_tournament_id_and_team_id", unique: true
+    t.index ["tournament_id"], name: "index_standings_on_tournament_id"
+  end
+
   create_table "teams", force: :cascade do |t|
     t.string "code3", limit: 3, null: false
     t.datetime "created_at", null: false
@@ -334,6 +356,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_31_000716) do
     t.bigint "champion_id"
     t.datetime "created_at", null: false
     t.datetime "ends_at", null: false
+    t.string "external_code"
     t.bigint "fourth_place_id"
     t.string "name", null: false
     t.bigint "runner_up_id"
@@ -342,6 +365,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_31_000716) do
     t.bigint "top_scorer_id"
     t.datetime "updated_at", null: false
     t.index ["champion_id"], name: "index_tournaments_on_champion_id"
+    t.index ["external_code"], name: "index_tournaments_on_external_code"
     t.index ["fourth_place_id"], name: "index_tournaments_on_fourth_place_id"
     t.index ["runner_up_id"], name: "index_tournaments_on_runner_up_id"
     t.index ["third_place_id"], name: "index_tournaments_on_third_place_id"
@@ -407,6 +431,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_31_000716) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "standings", "teams"
+  add_foreign_key "standings", "tournaments"
   add_foreign_key "teams", "tournaments"
   add_foreign_key "tournament_prediction_scores", "tournament_predictions"
   add_foreign_key "tournament_predictions", "players", column: "top_scorer_id"

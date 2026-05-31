@@ -47,6 +47,13 @@ module FootballData
       get("/matches/#{id}", cache_ttl: cache_ttl)
     end
 
+    # Standings (group tables) for a competition. The code is a required
+    # parameter — there is no default competition — so callers must pass the
+    # tournament's own code and nothing is hardcoded to a single competition.
+    def standings(code, cache_ttl: RESPONSE_TTL)
+      get("/competitions/#{code}/standings", cache_ttl: cache_ttl)
+    end
+
     private
 
     # Cached, rate-limited GET. A cache hit costs no quota; only a miss reaches

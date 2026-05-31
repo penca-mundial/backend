@@ -11,7 +11,10 @@ RSpec.describe "football_data rake tasks" do # rubocop:disable RSpec/DescribeCla
     Rails.application.load_tasks if Rake::Task.tasks.none? { |t| t.name.start_with?("football_data:") }
   end
 
-  before { Rake::Task["football_data:bootstrap"].reenable }
+  before do
+    Rake::Task["football_data:bootstrap"].reenable
+    Rake::Task["football_data:bootstrap_standings"].reenable
+  end
 
   describe "football_data:bootstrap" do
     it "runs SyncFixtures and prints the synced counts" do
@@ -60,6 +63,35 @@ RSpec.describe "football_data rake tasks" do # rubocop:disable RSpec/DescribeCla
 
         expect(Team.where(code3: "ARG").count).to eq(1)
       end
+    end
+  end
+
+  describe "football_data:bootstrap_standings" do
+    it "syncs a single tournament when given its id" do
+      tournament = create(:tournament, external_code: "WC")
+      allow(FootballData::SyncStandings).to receive(:call)
+        .and_return(ServiceResult.new(data: { standings_synced: 4 }))
+
+      expect { Rake::Task["football_data:bootstrap_standings"].invoke(tournament.id.to_s) }
+        .to output(/standings synced for .*: 4 rows/).to_stdout
+      expect(FootballData::SyncStandings).to have_received(:call).with(tournament: tournament)
+    end
+
+    it "syncs all active tournaments when no id is given" do
+      allow(FootballData::SyncActiveStandings).to receive(:call)
+        .and_return(ServiceResult.new(data: { tournaments_synced: 2 }))
+
+      expect { Rake::Task["football_data:bootstrap_standings"].invoke }
+        .to output(/standings synced for 2 active tournament/).to_stdout
+      expect(FootballData::SyncActiveStandings).to have_received(:call)
+    end
+
+    it "aborts when the sync fails" do
+      allow(FootballData::SyncActiveStandings).to receive(:call)
+        .and_return(ServiceResult.new(errors: [ "boom" ]))
+
+      expect { Rake::Task["football_data:bootstrap_standings"].invoke }
+        .to raise_error(SystemExit, /standings sync failed/)
     end
   end
 end

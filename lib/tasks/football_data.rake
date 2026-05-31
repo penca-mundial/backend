@@ -14,4 +14,18 @@ namespace :football_data do
     puts "  players synced: #{counts[:players_synced]}"
     puts "  matches synced: #{counts[:matches_synced]}"
   end
+
+  desc "Sync group standings for a tournament (by id), or all active tournaments if no id is given"
+  task :bootstrap_standings, [ :tournament_id ] => :environment do |_task, args|
+    if args[:tournament_id].present?
+      tournament = Tournament.find(args[:tournament_id])
+      result = FootballData::SyncStandings.call(tournament: tournament)
+      abort("standings sync failed: #{result.errors.join('; ')}") if result.failure?
+      puts "standings synced for #{tournament.name}: #{result.data[:standings_synced]} rows"
+    else
+      result = FootballData::SyncActiveStandings.call
+      abort("standings sync failed: #{result.errors.join('; ')}") if result.failure?
+      puts "standings synced for #{result.data[:tournaments_synced]} active tournament(s)"
+    end
+  end
 end

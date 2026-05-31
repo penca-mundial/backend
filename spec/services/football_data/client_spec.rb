@@ -68,6 +68,15 @@ RSpec.describe FootballData::Client do
     end
   end
 
+  describe "#standings" do
+    it "GETs the standings sub-resource for the given competition code" do
+      stub_request(:get, "#{base}/competitions/CL/standings")
+        .to_return(status: 200, body: { "standings" => [] }.to_json, headers: json_headers)
+
+      expect(client.standings("CL")).to eq("standings" => [])
+    end
+  end
+
   describe "error handling" do
     it "raises FootballData::ApiError on a non-2xx response" do
       stub_request(:get, "#{base}/competitions/WC").to_return(status: 403, body: "forbidden")

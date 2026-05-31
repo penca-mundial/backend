@@ -9,7 +9,12 @@ class Tournament < ApplicationRecord
 
   has_many :teams
   has_many :matches
+  has_many :standings
   has_many :players, through: :teams
 
   validates :name, :starts_at, :ends_at, presence: true
+
+  # Tournaments currently in their playing window — the ones whose standings are
+  # worth refreshing. Time-window based, with no competition-specific assumption.
+  scope :active, -> { where(starts_at: ..Time.current).where(ends_at: Time.current..) }
 end
