@@ -12,8 +12,9 @@ module FootballData
   # Two safeguards keep us within the 10 req/min free tier:
   #   * a rolling 60s request counter in Rails.cache that pauses once the limit
   #     is reached (see #throttle!);
-  #   * a 5-minute per-endpoint response cache, so repeat reads of the same data
-  #     don't burn quota.
+  #   * a per-endpoint response cache (default 5 minutes, configurable per call
+  #     via cache_ttl:; pass 0 to bypass it for live, fast-changing data) so
+  #     repeat reads of the same data don't burn quota.
   class Client < Service
     DEFAULT_BASE_URL = "https://api.football-data.org/v4"
     WORLD_CUP_CODE = "WC"
@@ -30,31 +31,40 @@ module FootballData
       @sleeper = sleeper
     end
 
-    def competition(code = WORLD_CUP_CODE)
-      get("/competitions/#{code}")
+    def competition(code = WORLD_CUP_CODE, cache_ttl: RESPONSE_TTL)
+      get("/competitions/#{code}", cache_ttl: cache_ttl)
     end
 
-    def competition_teams(code = WORLD_CUP_CODE)
-      get("/competitions/#{code}/teams")
+    def competition_teams(code = WORLD_CUP_CODE, cache_ttl: RESPONSE_TTL)
+      get("/competitions/#{code}/teams", cache_ttl: cache_ttl)
     end
 
-    def competition_matches(code = WORLD_CUP_CODE, filters: {})
-      get("/competitions/#{code}/matches", query: filters)
+    def competition_matches(code = WORLD_CUP_CODE, filters: {}, cache_ttl: RESPONSE_TTL)
+      get("/competitions/#{code}/matches", query: filters, cache_ttl: cache_ttl)
     end
 
-    def match(id)
-      get("/matches/#{id}")
+    def match(id, cache_ttl: RESPONSE_TTL)
+      get("/matches/#{id}", cache_ttl: cache_ttl)
     end
 
     private
 
     # Cached, rate-limited GET. A cache hit costs no quota; only a miss reaches
-    # the network, and only after passing the rate limiter.
-    def get(path, query: {})
-      Rails.cache.fetch(cache_key(path, query), expires_in: RESPONSE_TTL) do
-        throttle!
-        request(path, query)
+    # the network, and only after passing the rate limiter. Pass cache_ttl: 0 to
+    # bypass the cache entirely (read-through every call) — used by live match
+    # polling, which needs fresh scores and can't tolerate the default TTL.
+    def get(path, query: {}, cache_ttl: RESPONSE_TTL)
+      return fetch(path, query) if cache_ttl.zero?
+
+      Rails.cache.fetch(cache_key(path, query), expires_in: cache_ttl) do
+        fetch(path, query)
       end
+    end
+
+    # A single rate-limited network read (no caching).
+    def fetch(path, query)
+      throttle!
+      request(path, query)
     end
 
     def request(path, query)

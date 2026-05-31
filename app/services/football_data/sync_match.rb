@@ -12,6 +12,13 @@ module FootballData
   #
   # The update runs inside with_lock so concurrent polls can't interleave.
   class SyncMatch < Service
+    # Live scores change constantly, so we bypass the client's 5-minute default
+    # cache. A tiny non-zero TTL (rather than 0) still serves the SAME match
+    # from cache if two polls overlap within the window — a cheap guard against
+    # bursting the 10 req/min limit — while staying effectively fresh for the
+    # 60s polling cadence.
+    LIVE_CACHE_TTL = 10.seconds
+
     def initialize(match:, client: Client.new)
       @match = match
       @client = client
@@ -22,7 +29,7 @@ module FootballData
 
       @match.with_lock do
         was_finished = @match.status_finished?
-        apply(@client.match(@match.external_id))
+        apply(@client.match(@match.external_id, cache_ttl: LIVE_CACHE_TTL))
         @match.save!
         newly_finished = @match.status_finished? && !was_finished
       end

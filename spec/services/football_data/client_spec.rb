@@ -78,13 +78,31 @@ RSpec.describe FootballData::Client do
   end
 
   describe "response caching" do
-    it "serves repeat reads from cache within the TTL, hitting the network once" do
+    it "serves repeat reads from cache within the default TTL, hitting the network once" do
       stub = stub_request(:get, "#{base}/matches/7")
         .to_return(status: 200, body: { "id" => 7 }.to_json, headers: json_headers)
 
       2.times { client.match(7) }
 
       expect(stub).to have_been_requested.once
+    end
+
+    it "still caches when given an explicit non-zero cache_ttl" do
+      stub = stub_request(:get, "#{base}/matches/7")
+        .to_return(status: 200, body: { "id" => 7 }.to_json, headers: json_headers)
+
+      2.times { client.match(7, cache_ttl: 10.seconds) }
+
+      expect(stub).to have_been_requested.once
+    end
+
+    it "bypasses the cache entirely when cache_ttl is 0 (read-through every call)" do
+      stub = stub_request(:get, "#{base}/matches/7")
+        .to_return(status: 200, body: { "id" => 7 }.to_json, headers: json_headers)
+
+      2.times { client.match(7, cache_ttl: 0) }
+
+      expect(stub).to have_been_requested.twice
     end
   end
 
