@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
-module Matches
+module Predictions
   # Locks every still-open prediction for a match by stamping locked_at.
-  # Idempotent: predictions that are already locked are left untouched, so
-  # re-running never moves an existing lock time.
-  class LockPredictions < Service
+  # Called by MatchLockJob at kickoff. Idempotent: predictions that are already
+  # locked are left untouched, so re-running never moves an existing lock time.
+  # Returns a ServiceResult whose data is the number of rows locked.
+  class LockPredictionsForMatch < Service
     def initialize(match:)
       @match = match
     end
