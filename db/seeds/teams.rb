@@ -2,10 +2,12 @@
 
 require "yaml"
 
-# Seeds the 48 World Cup teams from a static YAML list. Keyed by external_id
-# (a `wc2026-<code>` placeholder) so that the Phase 3 SyncFixtures service can
-# later rewrite name / code3 / flag_url against football-data.org without
-# creating duplicate rows.
+# Seeds the 48 World Cup teams from a static YAML list. `code3` (the FIFA
+# three-letter code) is the stable natural key. `external_id "wc2026-<code>"` is
+# a PLACEHOLDER: FootballData::SyncFixtures matches each team by `code3` on the
+# first sync and overwrites `external_id` with the real football-data numeric id
+# (and sets `flag_url`), while preserving the curated `name` seeded here. So
+# these rows are reconciled in place — never duplicated.
 module Seeds
   module Teams
     DATA_PATH = Rails.root.join("db/seeds/data/teams.yml")

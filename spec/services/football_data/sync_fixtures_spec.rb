@@ -126,4 +126,40 @@ RSpec.describe FootballData::SyncFixtures do
     expect(match.kickoff_at).to eq(Time.zone.parse("2026-06-12T20:00:00Z"))
     expect(match.original_kickoff_at).to eq(original)
   end
+
+  context "with teams already created by db:seed (placeholder external_id)" do
+    # Mirrors db/seeds/teams.rb: code3 is the real key, external_id is a
+    # placeholder and the name is the curated Spanish translation.
+    let!(:seeded_argentina) do
+      create(:team, tournament: tournament, code3: "ARG", external_id: "wc2026-arg", name: "Argentina")
+    end
+
+    it "reconciles the seeded team in place instead of raising PG::UniqueViolation" do
+      expect { described_class.call }.not_to raise_error
+
+      expect(Team.where(code3: "ARG").count).to eq(1)
+      expect(seeded_argentina.reload).to have_attributes(
+        external_id: "1",                       # placeholder overwritten with API id
+        flag_url: "https://crest/arg.png",      # set from the API
+        name: "Argentina"                       # preserved from the seed
+      )
+    end
+
+    it "preserves the seed's curated name even when the API name differs" do
+      seeded_argentina.update!(name: "Argentina (curado)")
+
+      described_class.call
+
+      expect(seeded_argentina.reload.name).to eq("Argentina (curado)")
+      expect(seeded_argentina.external_id).to eq("1")
+    end
+
+    it "stays idempotent across repeated syncs" do
+      described_class.call
+      expect { described_class.call }.not_to raise_error
+
+      expect(Team.where(code3: "ARG").count).to eq(1)
+      expect(Team.count).to eq(2) # Argentina (reconciled) + Brazil (created)
+    end
+  end
 end
