@@ -17,3 +17,10 @@ production:
     class: MatchSyncJob
     queue: sync
     schedule: every 60 seconds
+  standings_sync:
+    # Group standings change only as matches finish. Every 10 minutes is frequent
+    # enough during live windows yet light on the 10 req/min quota (the client's
+    # 5-minute response cache absorbs bursts).
+    class: StandingsSyncJob
+    queue: sync
+    schedule: every 10 minutes

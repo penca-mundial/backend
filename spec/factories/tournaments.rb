@@ -5,5 +5,11 @@ FactoryBot.define do
     sequence(:name) { |n| "#{Faker::Address.country} World Cup #{2000 + n}" }
     starts_at { Faker::Time.forward(days: 30) }
     ends_at { starts_at + 30.days }
+
+    # Currently within its playing window — matches Tournament.active.
+    trait :active do
+      starts_at { 1.day.ago }
+      ends_at { 1.month.from_now }
+    end
   end
 end

@@ -56,6 +56,10 @@ Rails.application.routes.draw do
       get "matches/today", to: "matches#today"
       get "matches",       to: "matches#index"
       get "matches/:id",   to: "matches#show"
+
+      # Public group standings, scoped by ?tournament_id= (defaults to the first
+      # tournament). Grouped by group letter, ordered by position.
+      get "standings", to: "standings#index"
     end
   end
 end
