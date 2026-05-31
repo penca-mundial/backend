@@ -81,4 +81,17 @@ RSpec.describe FootballData::SyncMatch do
       expect { described_class.call(match: match) }.not_to have_enqueued_job(MatchScoringJob)
     end
   end
+
+  describe "cache bypass" do
+    let(:match)  { create(:match, external_id: "m-9", status: "scheduled", kickoff_at: 1.hour.from_now) }
+    let(:client) { instance_double(FootballData::Client) }
+
+    it "fetches the match with a short live cache_ttl so scores stay fresh" do
+      allow(client).to receive(:match).and_return("status" => "IN_PLAY")
+
+      described_class.call(match: match, client: client)
+
+      expect(client).to have_received(:match).with("m-9", cache_ttl: described_class::LIVE_CACHE_TTL)
+    end
+  end
 end
