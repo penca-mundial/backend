@@ -45,6 +45,10 @@ Rails.application.routes.draw do
       get    "predictions/me",  to: "predictions#index"
       put    "predictions",     to: "predictions#upsert"
       delete "predictions/:id", to: "predictions#destroy"
+
+      # Tournament-wide prediction (podium + top scorer), one per user.
+      get "tournament_predictions/me", to: "tournament_predictions#show"
+      put "tournament_predictions",    to: "tournament_predictions#upsert"
     end
   end
 end
