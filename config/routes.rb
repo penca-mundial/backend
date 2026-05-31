@@ -49,6 +49,13 @@ Rails.application.routes.draw do
       # Tournament-wide prediction (podium + top scorer), one per user.
       get "tournament_predictions/me", to: "tournament_predictions#show"
       put "tournament_predictions",    to: "tournament_predictions#upsert"
+
+      # Public fixture. Specific collection routes precede :id so they aren't
+      # swallowed by the show route.
+      get "matches/live",  to: "matches#live"
+      get "matches/today", to: "matches#today"
+      get "matches",       to: "matches#index"
+      get "matches/:id",   to: "matches#show"
     end
   end
 end
