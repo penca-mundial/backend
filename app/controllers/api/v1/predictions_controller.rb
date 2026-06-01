@@ -39,7 +39,7 @@ module Api
       private
 
       def scoped_predictions
-        scope = current_user.predictions.includes(:match)
+        scope = current_user.predictions.includes(:match, :prediction_scores)
         scope = scope.where(match_id: params[:match_id]) if params[:match_id].present?
         scope
       end
