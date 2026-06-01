@@ -104,13 +104,36 @@ RSpec.describe Scoring::ComputeMatchScores do
     end
   end
 
-  describe "concurrency and edge cases" do
-    it "wraps the work in match.with_lock" do
-      allow(match).to receive(:with_lock).and_call_original
+  describe "concurrency-safe upsert and edge cases" do
+    it "updates a pre-existing score to the correct values without duplicating" do
+      prediction = create(:prediction, match: match, predicted_home_score: 2, predicted_away_score: 1) # exact → 10
+      PredictionScore.create!(prediction: prediction, points_result: 1, points_advance: 1,
+                              multiplier: 1.0, computed_at: 1.day.ago) # stale (total 2)
 
-      described_class.call(match: match)
+      expect { described_class.call(match: match) }.not_to change(PredictionScore, :count)
 
-      expect(match).to have_received(:with_lock)
+      score = score_for(prediction)
+      expect(score.points_result).to eq(10)
+      expect(score.points_advance).to eq(0)
+      expect(score.total_points).to eq(10)
+    end
+
+    it "converges via re-find when a concurrent insert raises RecordNotUnique" do
+      prediction = create(:prediction, match: match, predicted_home_score: 2, predicted_away_score: 1) # exact → 10
+      existing = PredictionScore.create!(prediction: prediction, points_result: 99, points_advance: 99,
+                                         multiplier: 1.0, computed_at: 1.day.ago)
+
+      # Simulate the lost double-insert race: the first save! hits the unique
+      # index; the rescue re-finds the row that "the other writer" inserted.
+      racer = PredictionScore.new(prediction_id: prediction.id)
+      allow(racer).to receive(:save!).and_raise(ActiveRecord::RecordNotUnique.new("duplicate key"))
+      allow(PredictionScore).to receive(:find_or_initialize_by).and_call_original
+      allow(PredictionScore).to receive(:find_or_initialize_by)
+        .with(prediction_id: prediction.id).and_return(racer)
+
+      expect { described_class.call(match: match) }.not_to change(PredictionScore, :count)
+
+      expect(existing.reload.total_points).to eq(10) # (10 + 0) * 1.0, corrected via the retry
     end
 
     it "returns count 0 and writes nothing for a match with no predictions" do
