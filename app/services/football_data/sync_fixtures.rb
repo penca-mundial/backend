@@ -119,20 +119,47 @@ module FootballData
       away = team_for(data.dig("awayTeam", "id"))
       return false if home.nil? || away.nil?
 
-      score = data["score"]&.dig("fullTime") || {}
+      # Users predict the 90-minute result; ET/penalties only decide who
+      # advances. regularTime carries the post-90' score for ET/penalty matches;
+      # matches settled in 90' (all of the group stage) have no regularTime and
+      # fall back to fullTime — unchanged behavior there.
+      score = data["score"] || {}
+      result = score["regularTime"] || score["fullTime"] || {}
+      status = STATUS_MAP.fetch(data["status"], "scheduled")
+      phase = PHASE_MAP.fetch(data["stage"], "group_stage")
+
       match = Match.find_or_initialize_by(external_id: data["id"].to_s)
       match.update!(
         tournament: tournament,
         home_team: home,
         away_team: away,
         kickoff_at: Time.zone.parse(data["utcDate"]),
-        status: STATUS_MAP.fetch(data["status"], "scheduled"),
-        phase: PHASE_MAP.fetch(data["stage"], "group_stage"),
+        status: status,
+        phase: phase,
         group: GroupNormalizer.call(data["group"]),
-        home_score: score["home"] || 0,
-        away_score: score["away"] || 0
+        home_score: result["home"] || 0,
+        away_score: result["away"] || 0,
+        advancing_team_id: advancing_team_id_for(score["winner"], phase: phase, home: home, away: away,
+                                                 status: status, external_id: data["id"])
       )
       true
+    end
+
+    # Knockout advancing team from score.winner (already reflects ET/penalties).
+    # nil for the group stage and for DRAW / missing / unknown winner —
+    # anomalous for a finished KO, so it's logged.
+    def advancing_team_id_for(winner, phase:, home:, away:, status:, external_id:)
+      return nil if phase == "group_stage"
+
+      case winner
+      when "HOME_TEAM" then home.id
+      when "AWAY_TEAM" then away.id
+      else
+        if status == "finished"
+          log_warn("KO match #{external_id} finished without a resolvable winner: #{winner.inspect}")
+        end
+        nil
+      end
     end
 
     def team_for(external_id)

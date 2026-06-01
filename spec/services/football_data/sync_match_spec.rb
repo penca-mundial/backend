@@ -133,4 +133,74 @@ RSpec.describe FootballData::SyncMatch do
       expect(client).to have_received(:match).with("m-9", cache_ttl: described_class::LIVE_CACHE_TTL)
     end
   end
+
+  describe "knockout result and advancing team" do
+    it "stores the 90' result (regularTime), not the ET/penalty fullTime, with the advancing team" do
+      match = create(:match, :round_of_16, external_id: "ko-1", status: "live", kickoff_at: 1.hour.ago)
+      stub_match("ko-1", "status" => "FINISHED",
+                         "score" => { "regularTime" => { "home" => 1, "away" => 1 },
+                                      "fullTime" => { "home" => 7, "away" => 6 }, "winner" => "HOME_TEAM" })
+
+      described_class.call(match: match)
+
+      expect(match.reload).to have_attributes(home_score: 1, away_score: 1, advancing_team_id: match.home_team_id)
+    end
+
+    it "uses fullTime and maps AWAY_TEAM for a knockout settled in 90'" do
+      match = create(:match, :round_of_16, external_id: "ko-2", status: "live", kickoff_at: 1.hour.ago)
+      stub_match("ko-2", "status" => "FINISHED",
+                         "score" => { "fullTime" => { "home" => 0, "away" => 2 }, "winner" => "AWAY_TEAM" })
+
+      described_class.call(match: match)
+
+      expect(match.reload).to have_attributes(home_score: 0, away_score: 2, advancing_team_id: match.away_team_id)
+    end
+
+    it "leaves advancing_team_id nil for a group-stage match" do
+      match = create(:match, external_id: "grp-1", status: "live", kickoff_at: 1.hour.ago) # group_stage
+      stub_match("grp-1", "status" => "FINISHED",
+                          "score" => { "fullTime" => { "home" => 2, "away" => 1 }, "winner" => "HOME_TEAM" })
+
+      described_class.call(match: match)
+
+      expect(match.reload.advancing_team_id).to be_nil
+    end
+
+    it "leaves advancing_team_id nil (without raising) when a finished KO has no clear winner" do
+      match = create(:match, :round_of_16, external_id: "ko-draw", status: "live", kickoff_at: 1.hour.ago)
+      stub_match("ko-draw", "status" => "FINISHED",
+                            "score" => { "fullTime" => { "home" => 1, "away" => 1 }, "winner" => "DRAW" })
+
+      expect { described_class.call(match: match) }.not_to raise_error
+      expect(match.reload.advancing_team_id).to be_nil
+    end
+
+    it "sets advancing_team_id before enqueuing the scoring job" do
+      match = create(:match, :round_of_16, external_id: "ko-enq", status: "live", kickoff_at: 1.hour.ago)
+      stub_match("ko-enq", "status" => "FINISHED",
+                           "score" => { "fullTime" => { "home" => 1, "away" => 0 }, "winner" => "HOME_TEAM" })
+
+      advancing_at_enqueue = nil
+      allow(MatchScoringJob).to receive(:perform_later) do |id|
+        advancing_at_enqueue = Match.find(id).advancing_team_id
+      end
+
+      described_class.call(match: match)
+
+      expect(advancing_at_enqueue).to eq(match.home_team_id)
+    end
+
+    it "is idempotent: a re-sync keeps the same result and advancing team" do
+      match = create(:match, :round_of_16, external_id: "ko-idem", status: "live", kickoff_at: 1.hour.ago)
+      stub_match("ko-idem", "status" => "FINISHED",
+                            "score" => { "regularTime" => { "home" => 2, "away" => 1 },
+                                         "fullTime" => { "home" => 4, "away" => 3 }, "winner" => "HOME_TEAM" })
+
+      described_class.call(match: match)
+      first = match.reload.slice(:home_score, :away_score, :advancing_team_id)
+      described_class.call(match: match)
+
+      expect(match.reload.slice(:home_score, :away_score, :advancing_team_id)).to eq(first)
+    end
+  end
 end
