@@ -27,6 +27,8 @@ class Match < ApplicationRecord
            class_name: "Match", foreign_key: :feeds_into_match_id,
            dependent: :nullify, inverse_of: :feeds_into
 
+  has_many :predictions
+
   # prefix: true avoids clashes between status/phase predicates and other methods.
   enum :status, STATUSES.index_with(&:itself), prefix: true
   enum :phase,  PHASES.index_with(&:itself),   prefix: true
