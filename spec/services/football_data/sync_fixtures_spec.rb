@@ -118,6 +118,17 @@ RSpec.describe FootballData::SyncFixtures do
     )
   end
 
+  it "syncs the current tournament (resolver), not the first by id" do
+    # `tournament` (let!) is upcoming and first-by-id; an active one outranks it
+    # in CurrentTournamentQuery, so the sync must target the active one.
+    active = create(:tournament, starts_at: 1.day.ago, ends_at: 1.month.from_now, name: "Active Cup")
+
+    described_class.call
+
+    expect(active.reload.name).to eq("FIFA World Cup")          # competition payload synced here
+    expect(tournament.reload.name).not_to eq("FIFA World Cup")  # the first-by-id one is untouched
+  end
+
   it "is idempotent: running twice yields the same state with no duplicates" do
     described_class.call
     second = described_class.call

@@ -26,13 +26,25 @@ RSpec.describe "Api::V1::StandingsController", type: :request do
       expect(groups["A"].first["team"]).to include("id" => team_a1.id, "name" => "Argentina")
     end
 
-    it "defaults to the first tournament when no tournament_id is given" do
+    it "defaults to the current tournament when no tournament_id is given" do
       create(:standing, tournament: tournament, group: "C", position: 1)
 
       get "/api/v1/standings", headers: headers
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["groups"].keys).to eq(%w[C])
+    end
+
+    it "defaults to the current tournament (resolver), not the first by id" do
+      past = create(:tournament, starts_at: 1.month.ago, ends_at: 1.week.ago)        # lower id
+      current = create(:tournament, starts_at: 1.day.ago, ends_at: 1.week.from_now)  # active
+      create(:standing, tournament: past, group: "Z", position: 1)
+      create(:standing, tournament: current, group: "A", position: 1)
+
+      get "/api/v1/standings", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["groups"].keys).to eq(%w[A]) # current's group, not past's "Z"
     end
 
     it "returns empty groups when the tournament has no standings" do

@@ -60,5 +60,18 @@ RSpec.describe "Api::V1::TournamentPredictionsController", type: :request do
 
       expect(response).to have_http_status(:unprocessable_content)
     end
+
+    it "binds the prediction to the current tournament (resolver), not the first by id" do
+      create(:tournament, starts_at: 1.month.ago, ends_at: 1.week.ago)                  # past, lower id
+      current = create(:tournament, starts_at: 1.week.from_now, ends_at: 5.weeks.from_now) # upcoming
+      champion = create(:team, tournament: current)
+
+      put "/api/v1/tournament_predictions", params: { champion_id: champion.id }, headers: headers
+
+      expect(response).to have_http_status(:ok)
+      # If resolution fell back to the first-by-id (past) tournament, the champion
+      # would not belong to it and this would 422; success proves it resolved current.
+      expect(TournamentPrediction.sole.tournament).to eq(current)
+    end
   end
 end

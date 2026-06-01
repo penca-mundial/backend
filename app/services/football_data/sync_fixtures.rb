@@ -49,8 +49,10 @@ module FootballData
 
     private
 
+    # The current tournament being synced, resolved through the canonical
+    # CurrentTournamentQuery (active -> upcoming -> most recent past).
     def tournament
-      @tournament ||= Tournament.first!
+      @tournament ||= CurrentTournamentQuery.call || raise(ActiveRecord::RecordNotFound)
     end
 
     # Refresh the tournament's name/dates from the competition payload.

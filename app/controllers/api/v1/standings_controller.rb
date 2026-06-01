@@ -20,7 +20,7 @@ module Api
       def resolved_tournament
         return Tournament.find(params[:tournament_id]) if params[:tournament_id].present?
 
-        Tournament.first!
+        CurrentTournamentQuery.call || raise(ActiveRecord::RecordNotFound)
       end
     end
   end
