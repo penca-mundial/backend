@@ -66,6 +66,10 @@ Rails.application.routes.draw do
 
       # Public teams index, scoped by ?tournament_id= (defaults to current).
       get "teams", to: "teams#index"
+
+      # Public players index, filterable by ?team_id= / ?tournament_id=
+      # (defaults to current tournament). Paginated.
+      get "players", to: "players#index"
     end
   end
 end
