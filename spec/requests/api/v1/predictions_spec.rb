@@ -39,6 +39,41 @@ RSpec.describe "Api::V1::PredictionsController", type: :request do
         expect(response.parsed_body.size).to eq(1)
         expect(response.parsed_body.first["match_id"]).to eq(upcoming.id)
       end
+
+      it "includes points_earned: 0 for every prediction when none are scored yet" do
+        create(:prediction, user: user, match: upcoming)
+        create(:prediction, user: user, match: create(:match, kickoff_at: 1.week.from_now))
+
+        get "/api/v1/predictions/me", headers: headers
+
+        expect(response).to have_http_status(:ok)
+        expect(response.parsed_body.map { |p| p["points_earned"] }).to all(eq(0))
+      end
+
+      it "exposes points_earned from the prediction's score once computed" do
+        prediction = create(:prediction, user: user, match: upcoming)
+        # total_points = (points_result + points_advance) * multiplier => (5 + 1) * 1.0 = 6
+        create(:prediction_score, prediction: prediction, points_result: 5, points_advance: 1, multiplier: 1.0)
+
+        get "/api/v1/predictions/me", headers: headers
+
+        expect(response.parsed_body.first["points_earned"]).to eq(6)
+      end
+
+      it "does not N+1 on points_earned across predictions" do
+        3.times { create(:prediction, user: user, match: create(:match, kickoff_at: 1.week.from_now)) }
+
+        query_count = 0
+        counter = lambda do |_name, _started, _finished, _id, payload|
+          query_count += 1 unless %w[SCHEMA TRANSACTION].include?(payload[:name])
+        end
+
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+          get "/api/v1/predictions/me", headers: headers
+        end
+
+        expect(query_count).to be <= 6
+      end
     end
   end
 
