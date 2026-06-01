@@ -14,7 +14,10 @@ class PlayersQuery < ApplicationQuery
     scope = relation || Player.all
     scope = scope.where(team_id: @filters[:team_id]) if @filters[:team_id].present?
     scope = by_tournament(scope, @filters[:tournament_id]) if @filters[:tournament_id].present?
-    scope.includes(:team).order(:name)
+    # :id is a tie-breaker so the order is total — without it, equal names give
+    # an undefined order and LIMIT/OFFSET pagination can drop or repeat rows
+    # across page boundaries.
+    scope.includes(:team).order(:name, :id)
   end
 
   private

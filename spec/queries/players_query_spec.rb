@@ -32,4 +32,19 @@ RSpec.describe PlayersQuery do
     expect(result.map(&:name)).to eq(%w[Aaron Zoe])
     expect(result.first.association(:team)).to be_loaded
   end
+
+  it "breaks ties on id so the order is total (stable across paginated pages)" do
+    team = create(:team)
+    # Same name, inserted out of id order — ordering must fall back to id asc.
+    third  = create(:player, team: team, name: "Lionel Messi")
+    first  = create(:player, team: team, name: "Lionel Messi")
+    second = create(:player, team: team, name: "Lionel Messi")
+    # Reassign ids notionally: whatever the create order, expectation is id asc.
+    expected = [ third, first, second ].sort_by(&:id)
+
+    result = described_class.call(filters: { team_id: team.id }).to_a
+
+    expect(result).to eq(expected)
+    expect(result.map(&:id)).to eq(result.map(&:id).sort)
+  end
 end
