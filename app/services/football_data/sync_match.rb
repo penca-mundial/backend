@@ -72,7 +72,7 @@ module FootballData
       when "AWAY_TEAM" then @match.away_team_id
       else
         if @match.status_finished?
-          log_info("KO match #{@match.external_id} finished without a resolvable winner: #{winner.inspect}")
+          log_warn("KO match #{@match.external_id} finished without a resolvable winner: #{winner.inspect}")
         end
         nil
       end
