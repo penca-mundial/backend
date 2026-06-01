@@ -35,10 +35,10 @@ module Api
 
       private
 
-      # The platform runs a single tournament (the World Cup); every prediction
-      # hangs off it.
+      # The current tournament every prediction hangs off, resolved through the
+      # canonical CurrentTournamentQuery (active -> upcoming -> most recent past).
       def tournament
-        @tournament ||= Tournament.first!
+        @tournament ||= CurrentTournamentQuery.call || raise(ActiveRecord::RecordNotFound)
       end
 
       def prediction_params
