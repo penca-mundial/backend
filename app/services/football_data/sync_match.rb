@@ -43,14 +43,39 @@ module FootballData
     def apply(data)
       @match.status = SyncFixtures::STATUS_MAP.fetch(data["status"], @match.status)
 
-      score = data["score"]&.dig("fullTime") || {}
-      @match.home_score = score["home"] unless score["home"].nil?
-      @match.away_score = score["away"] unless score["away"].nil?
+      # Users predict the 90-minute result; ET/penalties only decide who
+      # advances. regularTime carries the post-90' score for ET/penalty matches;
+      # matches settled in 90' (all of the group stage) have no regularTime and
+      # fall back to fullTime — unchanged behavior there.
+      score = data["score"] || {}
+      result = score["regularTime"] || score["fullTime"] || {}
+      @match.home_score = result["home"] unless result["home"].nil?
+      @match.away_score = result["away"] unless result["away"].nil?
+
+      # winner already reflects ET/penalties, so we never derive it from goals.
+      @match.advancing_team_id = advancing_team_id_from(score["winner"])
 
       @match.minute = live_minute(data)
       @match.kickoff_at = Time.zone.parse(data["utcDate"]) if data["utcDate"].present?
       @match.events_log = Array(data["goals"]) if data.key?("goals")
       @match.last_synced_at = Time.current
+    end
+
+    # Knockout advancing team from score.winner. nil for the group stage (which
+    # has no advancing team) and for DRAW / missing / unknown winner — anomalous
+    # for a finished KO, so it's logged.
+    def advancing_team_id_from(winner)
+      return nil if @match.phase_group_stage?
+
+      case winner
+      when "HOME_TEAM" then @match.home_team_id
+      when "AWAY_TEAM" then @match.away_team_id
+      else
+        if @match.status_finished?
+          log_info("KO match #{@match.external_id} finished without a resolvable winner: #{winner.inspect}")
+        end
+        nil
+      end
     end
 
     # Resolve the match minute from the live payload:

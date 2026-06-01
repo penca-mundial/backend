@@ -189,4 +189,44 @@ RSpec.describe FootballData::SyncFixtures do
       expect(Team.count).to eq(2) # Argentina (reconciled) + Brazil (created)
     end
   end
+
+  describe "knockout result and advancing team" do
+    def stub_matches(body)
+      stub_request(:get, "#{base}/competitions/WC/matches")
+        .to_return(status: 200, body: body.to_json, headers: json_headers)
+    end
+
+    it "stores the 90' result (regularTime) and the advancing team from winner" do
+      stub_matches("matches" => [
+        { "id" => 1004, "utcDate" => "2026-07-10T18:00:00Z", "status" => "FINISHED", "stage" => "LAST_16",
+          "homeTeam" => { "id" => 1 }, "awayTeam" => { "id" => 2 },
+          "score" => { "regularTime" => { "home" => 1, "away" => 1 },
+                       "fullTime" => { "home" => 7, "away" => 6 }, "winner" => "HOME_TEAM" } }
+      ])
+
+      described_class.call
+
+      argentina = Team.find_by(external_id: "1")
+      expect(Match.find_by(external_id: "1004")).to have_attributes(
+        phase: "round_of_16", home_score: 1, away_score: 1, advancing_team_id: argentina.id
+      )
+    end
+
+    it "leaves advancing_team_id nil (without raising) for a finished KO with no clear winner" do
+      stub_matches("matches" => [
+        { "id" => 1005, "utcDate" => "2026-07-10T18:00:00Z", "status" => "FINISHED", "stage" => "LAST_16",
+          "homeTeam" => { "id" => 1 }, "awayTeam" => { "id" => 2 },
+          "score" => { "fullTime" => { "home" => 1, "away" => 1 }, "winner" => "DRAW" } }
+      ])
+
+      expect { described_class.call }.not_to raise_error
+      expect(Match.find_by(external_id: "1005").advancing_team_id).to be_nil
+    end
+
+    it "leaves advancing_team_id nil for a group-stage match" do
+      described_class.call # default body: match 1001 is GROUP_STAGE
+
+      expect(Match.find_by(external_id: "1001").advancing_team_id).to be_nil
+    end
+  end
 end
