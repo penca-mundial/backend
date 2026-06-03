@@ -30,6 +30,11 @@ module Scoring
 
     def call
       results = resolve_results
+      # Persist the real podium + top scorer on the Tournament so the public
+      # projection (TournamentBlueprint) has a single source of truth. The
+      # result keys match the column names exactly; unresolved dimensions are
+      # nil. Idempotent.
+      @tournament.update!(results)
 
       count = 0
       @tournament.tournament_predictions.find_each do |prediction|

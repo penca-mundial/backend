@@ -123,4 +123,40 @@ RSpec.describe Scoring::ComputeTournamentScores do
     expect { run }.not_to change(TournamentPredictionScore, :count)
     expect(prediction.reload.tournament_prediction_score.points_champion).to eq(50)
   end
+
+  it "persists the resolved podium and top scorer on the tournament" do
+    finish_podium
+    scorer
+
+    run
+
+    expect(tournament.reload).to have_attributes(
+      champion_id: teams[:champion].id, runner_up_id: teams[:runner_up].id,
+      third_place_id: teams[:third].id, fourth_place_id: teams[:fourth].id,
+      top_scorer_id: scorer.id
+    )
+  end
+
+  it "leaves unresolved tournament columns nil when a source match is missing" do
+    # Only the final is finished; no third-place match and no top scorer resolved.
+    create(:match, :final, tournament: tournament, home_team: teams[:champion], away_team: teams[:runner_up],
+                           status: "finished", advancing_team: teams[:champion])
+    allow(client).to receive(:scorers).and_return("scorers" => [])
+
+    run
+
+    expect(tournament.reload).to have_attributes(
+      champion_id: teams[:champion].id, runner_up_id: teams[:runner_up].id,
+      third_place_id: nil, fourth_place_id: nil, top_scorer_id: nil
+    )
+  end
+
+  it "is idempotent on the tournament columns when re-run" do
+    finish_podium
+    scorer
+    result_columns = %w[champion_id runner_up_id third_place_id fourth_place_id top_scorer_id]
+
+    run
+    expect { run }.not_to change { tournament.reload.attributes.slice(*result_columns) }
+  end
 end
