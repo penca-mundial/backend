@@ -83,6 +83,45 @@ RSpec.describe FootballData::SyncMatch do
     end
   end
 
+  describe "final -> finished triggers tournament scoring" do
+    it "enqueues TournamentScoringJob (delayed) once when the FINAL finishes" do
+      match = create(:match, :final, external_id: "fin-1", status: "live", kickoff_at: 1.hour.ago)
+      stub_match("fin-1", "status" => "FINISHED",
+                          "score" => { "fullTime" => { "home" => 2, "away" => 1 }, "winner" => "HOME_TEAM" })
+
+      expect { described_class.call(match: match) }
+        .to have_enqueued_job(TournamentScoringJob).with(match.tournament_id).exactly(:once)
+    end
+
+    it "still enqueues MatchScoringJob when the FINAL finishes" do
+      match = create(:match, :final, external_id: "fin-2", status: "live", kickoff_at: 1.hour.ago)
+      stub_match("fin-2", "status" => "FINISHED",
+                          "score" => { "fullTime" => { "home" => 1, "away" => 0 }, "winner" => "HOME_TEAM" })
+
+      expect { described_class.call(match: match) }
+        .to have_enqueued_job(MatchScoringJob).with(match.id)
+    end
+
+    it "does not enqueue TournamentScoringJob when a non-final match finishes" do
+      match = create(:match, :round_of_16, external_id: "fin-3", status: "live", kickoff_at: 1.hour.ago)
+      stub_match("fin-3", "status" => "FINISHED",
+                          "score" => { "fullTime" => { "home" => 1, "away" => 0 }, "winner" => "HOME_TEAM" })
+
+      expect { described_class.call(match: match) }.not_to have_enqueued_job(TournamentScoringJob)
+    end
+
+    it "enqueues tournament scoring only on the transition, not on repeat runs" do
+      match = create(:match, :final, external_id: "fin-4", status: "live", kickoff_at: 1.hour.ago)
+      stub_match("fin-4", "status" => "FINISHED",
+                          "score" => { "fullTime" => { "home" => 3, "away" => 2 }, "winner" => "HOME_TEAM" })
+
+      expect { described_class.call(match: match) }.to have_enqueued_job(TournamentScoringJob).exactly(:once)
+
+      clear_enqueued_jobs
+      expect { described_class.call(match: match) }.not_to have_enqueued_job(TournamentScoringJob)
+    end
+  end
+
   describe "kickoff change while scheduled" do
     let(:match) { create(:match, external_id: "m-3", status: "scheduled", kickoff_at: 2.days.from_now) }
     let(:new_kickoff) { 5.days.from_now.change(usec: 0) }
