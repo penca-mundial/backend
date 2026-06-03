@@ -10,13 +10,17 @@ module Seeds
     EXTERNAL_CODE = "WC" # football-data.org competition code
 
     def self.call
-      tournament = ::Tournament.find_or_create_by!(name: NAME) do |t|
-        t.starts_at = STARTS_AT
-        t.ends_at   = ENDS_AT
-      end
-      # Idempotently backfill the competition code (added in SCRUM-262) on both
-      # fresh and pre-existing rows.
-      tournament.update!(external_code: EXTERNAL_CODE) if tournament.external_code != EXTERNAL_CODE
+      # Identity is external_code (the competition code), never name — so the
+      # seed converges with FootballData::SyncFixtures regardless of run order
+      # and never creates a duplicate tournament (cf. teams-by-code3, SCRUM-256).
+      tournament = ::Tournament.find_or_initialize_by(external_code: EXTERNAL_CODE)
+      # The seed OWNS the name: set the curated name on every run, even over an
+      # API name a prior bootstrap may have written.
+      tournament.name = NAME
+      # Seed the dates only when missing, so a bootstrap's real API dates survive.
+      tournament.starts_at ||= STARTS_AT
+      tournament.ends_at   ||= ENDS_AT
+      tournament.save!
       tournament
     end
   end

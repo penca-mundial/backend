@@ -69,16 +69,21 @@ module FootballData
       success(matches_created: created)
     end
 
-    # The current tournament being synced, resolved through the canonical
-    # CurrentTournamentQuery (active -> upcoming -> most recent past).
+    # The tournament for the competition being synced, reconciled by its stable
+    # identity — external_code (the competition code, e.g. "WC") — never by name.
+    # This makes bootstrap and db:seed converge on a single row in any order
+    # (mirrors teams-by-code3, SCRUM-256). Built unsaved here; sync_competition_info
+    # fills the required attributes and persists it (creating it on first bootstrap).
     def tournament
-      @tournament ||= CurrentTournamentQuery.call || raise(ActiveRecord::RecordNotFound)
+      @tournament ||= Tournament.find_or_initialize_by(external_code: @code)
     end
 
-    # Refresh the tournament's name/dates from the competition payload.
+    # Refresh the tournament's dates from the competition payload and persist it.
+    # The curated name belongs to db:seed, so we only fall back to the API name
+    # when creating a brand-new row — an existing name is never overwritten.
     def sync_competition_info
       info = @client.competition(@code)
-      tournament.name = info["name"] if info["name"].present?
+      tournament.name = info["name"] if tournament.new_record? && info["name"].present?
       if (season = info["currentSeason"])
         tournament.starts_at = Time.zone.parse(season["startDate"]) if season["startDate"].present?
         tournament.ends_at = Time.zone.parse(season["endDate"]) if season["endDate"].present?
