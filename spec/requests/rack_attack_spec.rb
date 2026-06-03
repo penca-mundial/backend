@@ -59,16 +59,16 @@ RSpec.describe "Rack::Attack", :rack_attack, type: :request do
       expect(response).to have_http_status(:forbidden)
     end
   end
-end
 
-# Structural regression guard: rack-attack's railtie already inserts
-# Rack::Attack, so the app must NOT add it manually as well. A second insertion
-# is redundant config (only rack-attack's `rack.attack.called` re-entry guard
-# stops it from double-counting throttles); this spec fails if the duplicate
-# ever comes back.
-RSpec.describe "Rack::Attack middleware stack", type: :request do
-  it "inserts Rack::Attack exactly once" do
-    count = Rails.application.middleware.middlewares.count { |m| m == Rack::Attack }
-    expect(count).to eq(1)
+  # Structural regression guard: rack-attack's railtie already inserts
+  # Rack::Attack, so the app must NOT add it manually as well. A second insertion
+  # is redundant config (only rack-attack's `rack.attack.called` re-entry guard
+  # stops it from double-counting throttles); this spec fails if the duplicate
+  # ever comes back.
+  describe "middleware stack" do
+    it "inserts Rack::Attack exactly once" do
+      count = Rails.application.middleware.middlewares.count { |m| m == Rack::Attack }
+      expect(count).to eq(1)
+    end
   end
 end
