@@ -6,7 +6,9 @@ module FootballData
   # and reacts to the resulting transition:
   #
   #   * scheduled -> live: nothing extra (the lock job was scheduled at create).
-  #   * -> finished:       enqueue MatchScoringJob (once; idempotent).
+  #   * -> finished:       enqueue MatchScoringJob (once; idempotent). If the
+  #                        finished match is the FINAL, also enqueue
+  #                        TournamentScoringJob (delayed) for tournament-wide scoring.
   #   * kickoff moved while still scheduled: the Match after_commit callback
   #     cancels and reschedules MatchLockJob, so nothing is done here.
   #
@@ -34,7 +36,14 @@ module FootballData
         newly_finished = @match.status_finished? && !was_finished
       end
 
-      MatchScoringJob.perform_later(@match.id) if newly_finished
+      if newly_finished
+        MatchScoringJob.perform_later(@match.id)
+        # When the FINAL finishes, the tournament is over: enqueue tournament-wide
+        # scoring. The delay lets the scorers feed settle (a goal in the final can
+        # move the golden boot); there's no rush once the tournament has ended.
+        TournamentScoringJob.set(wait: 30.minutes).perform_later(@match.tournament_id) if @match.phase_final?
+      end
+
       success(@match)
     end
 
