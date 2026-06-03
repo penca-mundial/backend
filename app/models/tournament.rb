@@ -10,6 +10,7 @@ class Tournament < ApplicationRecord
   has_many :teams
   has_many :matches
   has_many :standings
+  has_many :tournament_predictions
   has_many :players, through: :teams
 
   validates :name, :starts_at, :ends_at, presence: true
