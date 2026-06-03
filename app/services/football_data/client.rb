@@ -54,6 +54,12 @@ module FootballData
       get("/competitions/#{code}/standings", cache_ttl: cache_ttl)
     end
 
+    # Top scorers for a competition (descending by goals); the first entry is
+    # the tournament's leading scorer. Code is a required parameter.
+    def scorers(code, cache_ttl: RESPONSE_TTL)
+      get("/competitions/#{code}/scorers", cache_ttl: cache_ttl)
+    end
+
     private
 
     # Cached, rate-limited GET. A cache hit costs no quota; only a miss reaches

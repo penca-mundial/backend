@@ -13,6 +13,8 @@ class TournamentPrediction < ApplicationRecord
   belongs_to :fourth_place, class_name: "Team",   optional: true
   belongs_to :top_scorer,   class_name: "Player", optional: true
 
+  has_one :tournament_prediction_score, dependent: :destroy
+
   validate :podium_spots_are_distinct
   validate :podium_teams_belong_to_tournament
   validate :top_scorer_belongs_to_tournament
