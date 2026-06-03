@@ -24,3 +24,10 @@ production:
     class: StandingsSyncJob
     queue: sync
     schedule: every 10 minutes
+  fixture_resync:
+    # Create-on-resolve (ADR-0001): ingest knockout matches once the feed names
+    # both teams. KO rounds resolve days apart, so every 3 hours is plenty; it
+    # never touches the live state of existing matches.
+    class: FixtureResyncJob
+    queue: sync
+    schedule: every 3 hours
