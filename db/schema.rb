@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_31_000718) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_03_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -365,7 +365,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_31_000718) do
     t.bigint "top_scorer_id"
     t.datetime "updated_at", null: false
     t.index ["champion_id"], name: "index_tournaments_on_champion_id"
-    t.index ["external_code"], name: "index_tournaments_on_external_code"
+    t.index ["external_code"], name: "index_tournaments_on_external_code", unique: true, where: "(external_code IS NOT NULL)"
     t.index ["fourth_place_id"], name: "index_tournaments_on_fourth_place_id"
     t.index ["runner_up_id"], name: "index_tournaments_on_runner_up_id"
     t.index ["third_place_id"], name: "index_tournaments_on_third_place_id"
