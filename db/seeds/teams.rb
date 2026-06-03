@@ -16,11 +16,18 @@ module Seeds
       tournament = ::Tournament.find_by!(name: Seeds::Tournament::NAME)
 
       load_data.each do |attrs|
-        ::Team.find_or_create_by!(external_id: attrs.fetch("external_id")) do |team|
-          team.tournament = tournament
-          team.name       = attrs.fetch("name")
-          team.code3      = attrs.fetch("code3")
-        end
+        # Reconcile by code3 (the stable FIFA key shared with the API), mirroring
+        # FootballData::SyncFixtures#upsert_team. Keying on the placeholder
+        # external_id would miss a bootstrapped row and try to insert a duplicate
+        # code3, violating the (tournament_id, code3) unique index.
+        team = ::Team.find_or_initialize_by(tournament: tournament, code3: attrs.fetch("code3"))
+        # The curated (Spanish) name is authoritative — it wins even over the
+        # API name a bootstrap may have written.
+        team.name = attrs.fetch("name")
+        # Seed the placeholder external_id only on fresh rows; never clobber the
+        # real football-data numeric id (or the API-owned flag_url) set by bootstrap.
+        team.external_id = attrs.fetch("external_id") if team.new_record?
+        team.save!
       end
     end
 
