@@ -2,15 +2,15 @@
 
 # Scores every tournament-wide prediction via Scoring::ComputeTournamentScores.
 # Enqueued by FootballData::SyncMatch when the FINAL transitions to 'finished'
-# (with a delay, so the scorers feed settles). Thin: it just invokes the service
-# and logs the outcome.
+# (with a delay, so the scorers feed settles). Thin: it invokes the service and,
+# because this is the tournament's one-shot terminal scoring, re-raises on
+# failure so the result is retried rather than silently lost.
 class TournamentScoringJob < ApplicationJob
   queue_as :scoring
 
-  # Backstop for transient/infra errors that escape the service. Like
-  # ComputeMatchScores, ComputeTournamentScores captures StandardError into
-  # result.errors, so a deterministic scoring failure is logged (not retried);
-  # this only catches what slips past the service.
+  # Retries both infra errors that escape the service AND service-level failures
+  # (which #perform re-raises) — see the rationale there. ComputeTournamentScores
+  # is idempotent, so retrying is safe.
   retry_on StandardError, attempts: 3
 
   # Declared after retry_on so it takes precedence for RecordNotFound: a deleted
@@ -25,10 +25,14 @@ class TournamentScoringJob < ApplicationJob
         "TournamentScoringJob: scored #{result.data[:count]} prediction(s) for tournament #{tournament_id}"
       )
     else
-      # Scoring failures are deterministic — log and stop, don't re-raise/retry.
-      Rails.logger.error(
-        "TournamentScoringJob: scoring failed for tournament #{tournament_id}: #{result.errors.to_sentence}"
-      )
+      message = "TournamentScoringJob: scoring failed for tournament #{tournament_id}: #{result.errors.to_sentence}"
+      Rails.logger.error(message)
+      # This is the tournament's terminal scoring: it runs once (final + 30 min)
+      # with no re-trigger, so a failure must NOT complete silently. Re-raise so
+      # retry_on retries (ComputeTournamentScores is idempotent); once the 3
+      # attempts are exhausted, ActiveJob routes it to failed jobs — visible,
+      # not a lost log line.
+      raise message
     end
   end
 end
