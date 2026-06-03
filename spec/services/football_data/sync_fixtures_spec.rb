@@ -229,4 +229,84 @@ RSpec.describe FootballData::SyncFixtures do
       expect(Match.find_by(external_id: "1001").advancing_team_id).to be_nil
     end
   end
+
+  describe "incremental re-sync (create-on-resolve)" do
+    def stub_matches(body)
+      stub_request(:get, "#{base}/competitions/WC/matches")
+        .to_return(status: 200, body: body.to_json, headers: json_headers)
+    end
+
+    # Teams already exist in the DB (qualified from the group stage); the
+    # incremental pass reads them from the DB, not the API.
+    before do
+      create(:team, tournament: tournament, external_id: "1", code3: "ARG")
+      create(:team, tournament: tournament, external_id: "2", code3: "BRA")
+    end
+
+    def team(external_id) = Team.find_by!(external_id: external_id)
+
+    it "creates a knockout match once the feed names both teams" do
+      stub_matches("matches" => [
+        { "id" => 2001, "utcDate" => "2026-06-28T19:00:00Z", "status" => "TIMED", "stage" => "LAST_16",
+          "homeTeam" => { "id" => 1 }, "awayTeam" => { "id" => 2 }, "score" => { "winner" => nil } }
+      ])
+
+      result = described_class.call(incremental: true)
+
+      expect(result).to be_success
+      expect(result.data).to eq(matches_created: 1)
+      expect(Match.find_by(external_id: "2001")).to have_attributes(
+        phase: "round_of_16", status: "scheduled",
+        home_team_id: team("1").id, away_team_id: team("2").id
+      )
+    end
+
+    it "skips a knockout match whose teams are still TBD in the feed" do
+      stub_matches("matches" => [
+        { "id" => 2002, "utcDate" => "2026-06-28T19:00:00Z", "status" => "TIMED", "stage" => "LAST_16",
+          "homeTeam" => { "id" => nil }, "awayTeam" => { "id" => nil }, "score" => { "winner" => nil } }
+      ])
+
+      result = described_class.call(incremental: true)
+
+      expect(result.data).to eq(matches_created: 0)
+      expect(Match.find_by(external_id: "2002")).to be_nil
+    end
+
+    it "is idempotent: re-running does not re-create the match" do
+      stub_matches("matches" => [
+        { "id" => 2001, "utcDate" => "2026-06-28T19:00:00Z", "status" => "TIMED", "stage" => "LAST_16",
+          "homeTeam" => { "id" => 1 }, "awayTeam" => { "id" => 2 }, "score" => { "winner" => nil } }
+      ])
+
+      described_class.call(incremental: true)
+      expect { described_class.call(incremental: true) }.not_to change(Match, :count)
+      expect(described_class.call(incremental: true).data).to eq(matches_created: 0)
+    end
+
+    it "never clobbers the live state of an existing match (only refreshes inert kickoff_at)" do
+      existing = create(:match, :finished, external_id: "1001", tournament: tournament,
+                                            home_team: team("1"), away_team: team("2"),
+                                            home_score: 2, away_score: 1, minute: 90,
+                                            kickoff_at: Time.zone.parse("2026-06-11T18:00:00Z"))
+      existing.update!(events_log: [ { "minute" => 23 } ])
+
+      # Feed reports different (live) values + a moved kickoff. Only kickoff_at
+      # may change; the rest is SyncMatch's domain.
+      stub_matches("matches" => [
+        { "id" => 1001, "utcDate" => "2026-06-11T20:00:00Z", "status" => "IN_PLAY", "stage" => "GROUP_STAGE",
+          "homeTeam" => { "id" => 1 }, "awayTeam" => { "id" => 2 },
+          "score" => { "fullTime" => { "home" => 9, "away" => 9 }, "winner" => "HOME_TEAM" } }
+      ])
+
+      expect { described_class.call(incremental: true) }.not_to change(Match, :count)
+
+      existing.reload
+      expect(existing).to have_attributes(
+        status: "finished", home_score: 2, away_score: 1, advancing_team_id: nil, minute: 90
+      )
+      expect(existing.events_log).to eq([ { "minute" => 23 } ])
+      expect(existing.kickoff_at).to eq(Time.zone.parse("2026-06-11T20:00:00Z")) # inert metadata refreshed
+    end
+  end
 end

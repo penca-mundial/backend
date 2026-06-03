@@ -29,13 +29,20 @@ module FootballData
       "FINAL" => "final"
     }.freeze
 
-    def initialize(client: Client.new, competition_code: Client::WORLD_CUP_CODE)
+    def initialize(client: Client.new, competition_code: Client::WORLD_CUP_CODE, incremental: false)
       @client = client
       @code = competition_code
+      @incremental = incremental
       @teams_by_external_id = {}
     end
 
+    # Full bootstrap (competition info + teams + players + every resolvable
+    # match) or, when incremental: true, the lightweight recurring re-sync that
+    # only creates newly-resolved matches and refreshes inert metadata. See
+    # #incremental_sync / #upsert_match.
     def call
+      return incremental_sync if @incremental
+
       counts = { teams_synced: 0, players_synced: 0, matches_synced: 0 }
 
       ActiveRecord::Base.transaction do
@@ -48,6 +55,19 @@ module FootballData
     end
 
     private
+
+    # Recurring "create-on-resolve" pass (ADR-0001): no competition/teams API
+    # calls — teams come from the DB — and matches whose teams are still TBD in
+    # the feed are skipped. Creates each knockout match once the feed names both
+    # teams; the live state of existing matches is left to SyncMatch.
+    def incremental_sync
+      @teams_by_external_id = tournament.teams.index_by(&:external_id)
+      created = 0
+      @client.competition_matches(@code).fetch("matches", []).each do |data|
+        created += 1 if upsert_match(data)
+      end
+      success(matches_created: created)
+    end
 
     # The current tournament being synced, resolved through the canonical
     # CurrentTournamentQuery (active -> upcoming -> most recent past).
@@ -113,11 +133,16 @@ module FootballData
     end
 
     # Skips matches whose teams are not (yet) known — knockout slots are often
-    # TBD in the feed until the bracket fills in.
+    # TBD in the feed until the bracket fills in. In incremental mode an existing
+    # match is only refreshed for inert metadata (#refresh_existing); its live
+    # state is never touched.
     def upsert_match(data)
       home = team_for(data.dig("homeTeam", "id"))
       away = team_for(data.dig("awayTeam", "id"))
       return false if home.nil? || away.nil?
+
+      match = Match.find_or_initialize_by(external_id: data["id"].to_s)
+      return refresh_existing(match, data) if @incremental && match.persisted?
 
       # Users predict the 90-minute result; ET/penalties only decide who
       # advances. regularTime carries the post-90' score for ET/penalty matches;
@@ -128,7 +153,6 @@ module FootballData
       status = STATUS_MAP.fetch(data["status"], "scheduled")
       phase = PHASE_MAP.fetch(data["stage"], "group_stage")
 
-      match = Match.find_or_initialize_by(external_id: data["id"].to_s)
       match.update!(
         tournament: tournament,
         home_team: home,
@@ -143,6 +167,16 @@ module FootballData
                                                  status: status, external_id: data["id"])
       )
       true
+    end
+
+    # Incremental refresh of an existing match: only inert structural metadata
+    # (kickoff_at — postponements far beyond the poller's 24h horizon). Never the
+    # live state (status / scores / advancing_team_id / minute / events_log)
+    # owned by SyncMatch. Returns false: this is not a creation.
+    def refresh_existing(match, data)
+      kickoff = Time.zone.parse(data["utcDate"]) if data["utcDate"].present?
+      match.update!(kickoff_at: kickoff) if kickoff && kickoff != match.kickoff_at
+      false
     end
 
     # Knockout advancing team from score.winner (already reflects ET/penalties).
