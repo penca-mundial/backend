@@ -30,10 +30,13 @@ RSpec.describe "GET /api/v1/tournaments/:id/standings" do
     expect(leader["team"]).to include("name" => "Argentina", "code3" => argentina.code3)
   end
 
-  it "is public (no authentication required)" do
+  # Mirrors the auth policy of the GET /api/v1/standings feed (SCRUM-262) it will
+  # replace, so the front-end swap is transparent. 262 is public, so this is too.
+  it "is publicly accessible without authentication" do
     get_standings
 
     expect(response).to have_http_status(:ok)
+    expect(response).not_to have_http_status(:unauthorized)
   end
 
   it "404s when the tournament does not exist" do

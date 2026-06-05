@@ -4,9 +4,11 @@ module Api
   module V1
     module Tournaments
       # GET /api/v1/tournaments/:id/standings — the CALCULATED group-stage tables
-      # (composition from Match#group, stats from finished results). Public, like
-      # the other tournament reads. All computation lives in GroupStandingsQuery;
-      # this controller only resolves the tournament, calls the query, serializes.
+      # (composition from Match#group, stats from finished results). Public on
+      # purpose: it mirrors the auth policy of the GET /api/v1/standings feed
+      # (SCRUM-262) it will replace, so the front-end swap is transparent. All
+      # computation lives in GroupStandingsQuery; this controller only resolves
+      # the tournament, calls the query, serializes.
       #
       # Cached with a short TTL (rather than invalidating on each finished match):
       # standings only move when a group match ends, so ~30s of staleness is
