@@ -50,6 +50,18 @@ Rails.application.routes.draw do
       get "tournament_predictions/me", to: "tournament_predictions#show"
       put "tournament_predictions",    to: "tournament_predictions#upsert"
 
+      # Groups (all authenticated). Collection/specific routes precede :id so
+      # they aren't swallowed by the show route.
+      get    "groups/me",   to: "groups#index"
+      post   "groups/join", to: "groups#join"
+      post   "groups",      to: "groups#create"
+      get    "groups/:id",  to: "groups#show"
+      patch  "groups/:id",  to: "groups#update"
+      delete "groups/:id",  to: "groups#destroy"
+      post   "groups/:id/regenerate_code",  to: "groups#regenerate_code"
+      get    "groups/:id/members",          to: "groups#members"
+      delete "groups/:id/members/:user_id", to: "groups#kick_member"
+
       # Public fixture. Specific collection routes precede :id so they aren't
       # swallowed by the show route.
       get "matches/live",  to: "matches#live"
