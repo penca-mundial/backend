@@ -109,12 +109,14 @@ class LeaderboardQuery < ApplicationQuery
                COUNT(*) FILTER (WHERE ps.breakdown->>'result_rule' = 'exact_score') AS exact_count
         FROM prediction_scores ps
         JOIN predictions p ON p.id = ps.prediction_id
+        JOIN members me ON me.user_id = p.user_id
         GROUP BY p.user_id
       ),
       tournament_scores AS (
         SELECT tp.user_id, SUM(tps.total_points) AS tournament_points
         FROM tournament_prediction_scores tps
         JOIN tournament_predictions tp ON tp.id = tps.tournament_prediction_id
+        JOIN members me ON me.user_id = tp.user_id
         GROUP BY tp.user_id
       ),
       ranked AS (
