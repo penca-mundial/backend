@@ -52,15 +52,6 @@ module Api
         Integer(value, exception: false)
       end
 
-      def render_validation_error(errors)
-        render_error(
-          code:    "validation_error",
-          message: errors.to_sentence,
-          status:  :unprocessable_content,
-          details: { errors: errors }
-        )
-      end
-
       def render_forbidden
         render_error(
           code:    "forbidden",

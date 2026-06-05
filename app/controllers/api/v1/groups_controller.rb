@@ -126,13 +126,6 @@ module Api
         GroupMembership.where(group_id: groups.map(&:id)).group(:group_id).count
       end
 
-      def render_validation_error(errors)
-        render_error(
-          code: "validation_error", message: errors.to_sentence,
-          status: :unprocessable_content, details: { errors: errors }
-        )
-      end
-
       def render_forbidden
         render_error(
           code: "forbidden",
