@@ -13,7 +13,7 @@ module Seeds
     DATA_PATH = Rails.root.join("db/seeds/data/teams.yml")
 
     def self.call
-      tournament = ::Tournament.find_by!(name: Seeds::Tournament::NAME)
+      tournament = ::Tournament.find_by!(external_code: Seeds::Tournament::EXTERNAL_CODE)
 
       load_data.each do |attrs|
         # Reconcile by code3 (the stable FIFA key shared with the API), mirroring

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe FootballData::SyncFixtures do
   subject(:result) { described_class.call }
 
-  let!(:tournament) { create(:tournament) }
+  let!(:tournament) { create(:tournament, external_code: "WC") }
   let(:competition_body) do
     {
       "id" => 2000,
@@ -108,25 +108,37 @@ RSpec.describe FootballData::SyncFixtures do
     expect(Match.find_by(external_id: "1001").group).to eq("A")
   end
 
-  it "refreshes the tournament info from the competition payload" do
+  it "refreshes the tournament dates from the competition payload without overwriting the name" do
+    original_name = tournament.name
     result
 
     expect(tournament.reload).to have_attributes(
-      name: "FIFA World Cup",
+      name: original_name, # the curated name belongs to the seed; sync never overwrites it
       starts_at: Time.zone.parse("2026-06-11"),
       ends_at: Time.zone.parse("2026-07-19")
     )
   end
 
-  it "syncs the current tournament (resolver), not the first by id" do
-    # `tournament` (let!) is upcoming and first-by-id; an active one outranks it
-    # in CurrentTournamentQuery, so the sync must target the active one.
-    active = create(:tournament, starts_at: 1.day.ago, ends_at: 1.month.from_now, name: "Active Cup")
+  it "reconciles the tournament by external_code, ignoring other tournaments" do
+    # Identity is external_code, not CurrentTournamentQuery recency: an active
+    # tournament with a different code must NOT be the sync target.
+    other = create(:tournament, :active, external_code: "OTHER", name: "Other Cup")
 
     described_class.call
 
-    expect(active.reload.name).to eq("FIFA World Cup")          # competition payload synced here
-    expect(tournament.reload.name).not_to eq("FIFA World Cup")  # the first-by-id one is untouched
+    expect(tournament.reload.starts_at).to eq(Time.zone.parse("2026-06-11")) # WC populated
+    expect(Team.where(tournament: tournament).count).to eq(2)
+    expect(Team.where(tournament: other).count).to eq(0)                     # untouched
+    expect(other.reload.name).to eq("Other Cup")
+  end
+
+  it "creates the tournament (with external_code) when none exists for the code" do
+    tournament.destroy
+
+    expect { described_class.call }.to change(Tournament, :count).by(1)
+    created = Tournament.sole
+    expect(created).to have_attributes(external_code: "WC", name: "FIFA World Cup") # API name fallback on create
+    expect(Team.where(tournament: created).count).to eq(2)
   end
 
   it "is idempotent: running twice yields the same state with no duplicates" do

@@ -14,6 +14,9 @@ class Tournament < ApplicationRecord
   has_many :players, through: :teams
 
   validates :name, :starts_at, :ends_at, presence: true
+  # One tournament per competition code; nil is allowed (and not unique-checked),
+  # backed by a partial unique index (SCRUM-274).
+  validates :external_code, uniqueness: true, allow_nil: true
 
   # Tournaments currently in their playing window — the ones whose standings are
   # worth refreshing. Time-window based, with no competition-specific assumption.

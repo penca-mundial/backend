@@ -45,7 +45,7 @@ RSpec.describe "football_data rake tasks" do # rubocop:disable RSpec/DescribeCla
       end
 
       before do
-        tournament = create(:tournament)
+        tournament = create(:tournament, external_code: "WC")
         create(:team, tournament: tournament, code3: "ARG", external_id: "wc2026-arg", name: "Argentina")
 
         stub_request(:get, "#{base}/competitions/WC")

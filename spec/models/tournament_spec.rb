@@ -13,6 +13,30 @@ RSpec.describe Tournament, type: :model do
     it { is_expected.to validate_presence_of(:ends_at) }
   end
 
+  describe "external_code uniqueness (one tournament per competition code)" do
+    it "rejects a second tournament with the same external_code via validation" do
+      create(:tournament, external_code: "WC")
+      duplicate = build(:tournament, external_code: "WC")
+
+      expect(duplicate).not_to be_valid
+      expect(duplicate.errors[:external_code]).to be_present
+    end
+
+    it "allows multiple tournaments with a nil external_code" do
+      create(:tournament, external_code: nil)
+
+      expect(build(:tournament, external_code: nil)).to be_valid
+    end
+
+    it "enforces uniqueness at the database level via the partial unique index" do
+      create(:tournament, external_code: "WC")
+      duplicate = build(:tournament, external_code: "WC")
+
+      # Bypass the validation to prove the DB index itself forbids the duplicate.
+      expect { duplicate.save!(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
+    end
+  end
+
   describe "associations" do
     it { is_expected.to belong_to(:champion).class_name("Team").optional }
     it { is_expected.to belong_to(:runner_up).class_name("Team").optional }
