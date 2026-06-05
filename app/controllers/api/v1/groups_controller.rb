@@ -106,10 +106,6 @@ module Api
         params.permit(:name, :description)
       end
 
-      def member?(group)
-        group.memberships.exists?(user_id: current_user.id)
-      end
-
       def owner?(group)
         group.owner_id == current_user.id
       end
@@ -124,14 +120,6 @@ module Api
 
       def member_counts_for(groups)
         GroupMembership.where(group_id: groups.map(&:id)).group(:group_id).count
-      end
-
-      def render_forbidden
-        render_error(
-          code: "forbidden",
-          message: I18n.t("errors.forbidden", default: "No tenés permisos para esta acción."),
-          status: :forbidden
-        )
       end
     end
   end
