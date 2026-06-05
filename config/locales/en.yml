@@ -15,6 +15,13 @@ en:
   services:
     errors:
       record_not_found: "Resource not found."
+    groups:
+      not_found: "The group does not exist or the code is invalid."
+      not_owner: "Only the group owner can perform this action."
+      owner_cannot_leave: "The owner cannot leave their own group."
+      cannot_delete_general_pool: "The general pool cannot be deleted."
+      cannot_kick_owner: "The group owner cannot be removed."
+      not_a_member: "That user is not a member of the group."
   activerecord:
     errors:
       models:

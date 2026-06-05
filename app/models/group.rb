@@ -29,11 +29,23 @@ class Group < ApplicationRecord
     memberships.count >= MAX_MEMBERSHIPS
   end
 
+  # Roll the invite code to a fresh unique value and persist it. assign_code only
+  # runs on create, so rotating an existing group's code needs this explicit
+  # path; both share assign_new_code so the generation logic lives in one place.
+  def regenerate_code!
+    assign_new_code
+    save!
+  end
+
   private
 
   def assign_code
     return if code.present?
 
+    assign_new_code
+  end
+
+  def assign_new_code
     self.code = loop do
       candidate = SecureRandom.alphanumeric(8).upcase
       break candidate unless Group.unscoped.exists?(code: candidate)
