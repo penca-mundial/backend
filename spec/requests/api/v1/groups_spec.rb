@@ -144,6 +144,26 @@ RSpec.describe "Api::V1::GroupsController", type: :request do
 
       expect(response).to have_http_status(:unprocessable_content)
     end
+
+    it "updates only the description, leaving the name intact" do
+      group = group_owned_by(user, name: "Nombre Fijo")
+
+      patch "/api/v1/groups/#{group.id}", params: { description: "nueva desc" }.to_json,
+                                          headers: headers.merge("Content-Type" => "application/json")
+
+      expect(response).to have_http_status(:ok)
+      expect(group.reload).to have_attributes(name: "Nombre Fijo", description: "nueva desc")
+    end
+
+    it "updates only the name, leaving the description intact" do
+      group = group_owned_by(user, description: "desc original")
+
+      patch "/api/v1/groups/#{group.id}", params: { name: "Nombre Nuevo" }.to_json,
+                                          headers: headers.merge("Content-Type" => "application/json")
+
+      expect(response).to have_http_status(:ok)
+      expect(group.reload).to have_attributes(name: "Nombre Nuevo", description: "desc original")
+    end
   end
 
   describe "DELETE /api/v1/groups/:id" do
