@@ -17,10 +17,11 @@ class Service
   rescue ActiveRecord::RecordNotSaved => e
     # A callback halting the save with `throw :abort` (e.g. a model guard) raises
     # this with a generic message; surface the record's own errors instead, like
-    # the RecordInvalid sibling. Not logged: an aborted save is an expected,
-    # user-facing outcome, not a system error. presence || covers an :abort that
-    # left no errors populated.
+    # the RecordInvalid sibling. Log the resolved message (not the generic
+    # e.message) to match the siblings. presence || covers an :abort that left no
+    # errors populated.
     messages = e.record&.errors&.full_messages.presence || [ e.message ]
+    service&.log_error(messages.join("; "))
     ServiceResult.new(errors: messages)
   rescue ActiveRecord::RecordNotFound => e
     service&.log_error(e.message)
