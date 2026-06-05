@@ -14,6 +14,13 @@ es:
   services:
     errors:
       record_not_found: "Recurso no encontrado."
+    groups:
+      not_found: "El grupo no existe o el código es inválido."
+      not_owner: "Solo el dueño del grupo puede realizar esta acción."
+      owner_cannot_leave: "El dueño no puede abandonar su propio grupo."
+      cannot_delete_general_pool: "No se puede eliminar la liga general."
+      cannot_kick_owner: "No se puede expulsar al dueño del grupo."
+      not_a_member: "El usuario no es integrante del grupo."
   activerecord:
     errors:
       models:
