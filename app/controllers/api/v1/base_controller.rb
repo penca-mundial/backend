@@ -46,6 +46,17 @@ module Api
         render json: { error: { code:, message:, details: } }, status:
       end
 
+      # Render a failed ServiceResult's errors as a 422. Shared by every
+      # controller that delegates to a service.
+      def render_validation_error(errors)
+        render_error(
+          code:    "validation_error",
+          message: errors.to_sentence,
+          status:  :unprocessable_content,
+          details: { errors: errors }
+        )
+      end
+
       # Render a paginated collection and expose the total count to the browser
       # via the X-Total-Count header.
       def render_paginated(collection, blueprint, **options)

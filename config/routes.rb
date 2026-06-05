@@ -62,6 +62,9 @@ Rails.application.routes.draw do
       get    "groups/:id/members",          to: "groups#members"
       delete "groups/:id/members/:user_id", to: "groups#kick_member"
 
+      # Self-leave: the current user removes their own membership.
+      delete "groups/:group_id/membership", to: "group_memberships#destroy"
+
       # Public fixture. Specific collection routes precede :id so they aren't
       # swallowed by the show route.
       get "matches/live",  to: "matches#live"
