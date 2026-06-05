@@ -64,6 +64,11 @@ Rails.application.routes.draw do
       # Canonical "current" tournament (active -> upcoming -> most recent past).
       get "tournaments/current", to: "tournaments#current"
 
+      # Calculated group-stage tables for a tournament (composition from
+      # Match#group, stats from finished results). Distinct from the mirrored
+      # /standings feed above.
+      get "tournaments/:id/standings", to: "tournaments/standings#index"
+
       # Public teams index, scoped by ?tournament_id= (defaults to current).
       get "teams", to: "teams#index"
 
