@@ -57,6 +57,21 @@ module Api
         )
       end
 
+      # Generic 403. Controllers with a domain-specific message override this.
+      def render_forbidden
+        render_error(
+          code:    "forbidden",
+          message: I18n.t("errors.forbidden", default: "No tenés permisos para esta acción."),
+          status:  :forbidden
+        )
+      end
+
+      # Whether the current user belongs to the given group. Shared by the group
+      # and rankings endpoints that gate on membership.
+      def member?(group)
+        group.memberships.exists?(user_id: current_user.id)
+      end
+
       # Render a paginated collection and expose the total count to the browser
       # via the X-Total-Count header.
       def render_paginated(collection, blueprint, **options)
