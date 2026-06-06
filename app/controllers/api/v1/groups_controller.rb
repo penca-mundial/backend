@@ -10,7 +10,7 @@ module Api
     class GroupsController < BaseController
       # GET /api/v1/groups/me
       def index
-        groups = current_user.groups.order(is_general_pool: :desc, created_at: :desc).to_a
+        groups = current_user.groups.includes(:owner).order(is_general_pool: :desc, created_at: :desc).to_a
         render json: GroupBlueprint.render(
           groups, current_user: current_user, member_counts: member_counts_for(groups)
         ), content_type: "application/json"
@@ -28,7 +28,7 @@ module Api
 
       # GET /api/v1/groups/:id
       def show
-        group = Group.find(params[:id])
+        group = Group.includes(:owner).find(params[:id])
         return render_forbidden unless member?(group)
 
         render json: group_hash(group)

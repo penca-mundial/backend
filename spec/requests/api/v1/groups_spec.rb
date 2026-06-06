@@ -308,4 +308,49 @@ RSpec.describe "Api::V1::GroupsController", type: :request do
       expect(response).to have_http_status(:unprocessable_content)
     end
   end
+
+  describe "owner_username (creator) exposure" do
+    before { login_as(user, scope: :user) }
+
+    def count_queries
+      count = 0
+      counter = lambda do |_n, _s, _f, _id, payload|
+        count += 1 unless %w[SCHEMA TRANSACTION].include?(payload[:name])
+      end
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { yield }
+      count
+    end
+
+    it "exposes the creator's username on show" do
+      group = group_owned_by(other)
+      create(:group_membership, group: group, user: user)
+
+      get "/api/v1/groups/#{group.id}", headers: headers
+
+      expect(response.parsed_body["owner_username"]).to eq(other.username)
+    end
+
+    it "exposes the creator's username for each group on /groups/me" do
+      group = group_owned_by(other)
+      create(:group_membership, group: group, user: user)
+
+      get "/api/v1/groups/me", headers: headers
+
+      expect(response.parsed_body.first).to include("owner_username" => other.username)
+    end
+
+    it "does not issue an N+1 for owner_username (bounded, independent of group count)" do
+      6.times do
+        g = group_owned_by(create(:user)) # 6 groups, each owned by a DISTINCT user
+        create(:group_membership, group: g, user: user)
+      end
+
+      query_count = count_queries { get "/api/v1/groups/me", headers: headers }
+
+      # With :owner preloaded the owners load in one query; without it this would
+      # be ~6 extra (one per distinct owner). Bounded well below the per-group count.
+      expect(response.parsed_body.size).to eq(6)
+      expect(query_count).to be <= 6
+    end
+  end
 end
