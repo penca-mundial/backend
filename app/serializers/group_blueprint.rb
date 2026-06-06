@@ -10,6 +10,12 @@ class GroupBlueprint < Blueprinter::Base
 
   fields :name, :description, :code, :is_general_pool, :created_at
 
+  # Who created the group. Callers must preload :owner (see GroupsController
+  # index/show) so listing many groups stays N+1-free.
+  field :owner_username do |group|
+    group.owner&.username
+  end
+
   field :member_count do |group, options|
     counts = options[:member_counts]
     counts ? counts.fetch(group.id, 0) : group.memberships.count
