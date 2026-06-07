@@ -3,9 +3,11 @@
 FactoryBot.define do
   factory :ranking_snapshot do
     user
+    tournament
     group { nil } # a global snapshot by default
     points { 100 }
     rank_position { 1 }
+    exact_count { 0 }
     snapshot_at { Time.current }
 
     # A group-scoped snapshot row.
