@@ -32,22 +32,25 @@ class LeaderboardQuery < ApplicationQuery
     keyword_init: true
   )
 
-  # The ranked rows (cached). group: nil ranks every user.
-  def call(group: nil, limit: DEFAULT_LIMIT)
-    key = [ "leaderboard", group&.id, limit ]
+  # The ranked rows (cached). tournament is REQUIRED — points and exact_count are
+  # scoped to it. group: nil ranks every user (global), otherwise the group's
+  # members. The cache key includes tournament.id so two tournaments never share
+  # an entry.
+  def call(tournament:, group: nil, limit: DEFAULT_LIMIT)
+    key = [ "leaderboard", tournament.id, group&.id, limit ]
     cached = Rails.cache.read(key)
     return cached if cached
 
-    rows = run(leaderboard_sql(group), binds(group, limit: limit))
+    rows = run(leaderboard_sql(group), binds(tournament, group, limit: limit))
     Rails.cache.write(key, rows, expires_in: ttl)
     rows
   end
 
   # The user's row plus up to NEIGHBORS rows above and below it (a small context
-  # window). Empty when the user is outside the universe (e.g. not a member).
-  # Not cached — it is a targeted lookup, not the hot list.
-  def position_of(user, group: nil)
-    run(window_sql(group), binds(group, user_id: user.id))
+  # window), scoped to the tournament. Empty when the user is outside the
+  # universe (e.g. not a member). Not cached — a targeted lookup, not the hot list.
+  def position_of(user, tournament:, group: nil)
+    run(window_sql(group), binds(tournament, group, user_id: user.id))
   end
 
   private
@@ -66,9 +69,12 @@ class LeaderboardQuery < ApplicationQuery
     end
   end
 
-  # Named binds; group_id only when scoping to a group.
-  def binds(group, **extra)
-    (group ? { group_id: group.id } : {}).merge(extra)
+  # Named binds; tournament_id always (the scope), group_id only when scoping to
+  # a group.
+  def binds(tournament, group, **extra)
+    base = { tournament_id: tournament.id }
+    base[:group_id] = group.id if group
+    base.merge(extra)
   end
 
   # Reuse the existing "is anything live?" signal (cf. MatchesController).
@@ -109,6 +115,7 @@ class LeaderboardQuery < ApplicationQuery
                COUNT(*) FILTER (WHERE ps.breakdown->>'result_rule' = 'exact_score') AS exact_count
         FROM prediction_scores ps
         JOIN predictions p ON p.id = ps.prediction_id
+        JOIN matches mt ON mt.id = p.match_id AND mt.tournament_id = :tournament_id
         JOIN members me ON me.user_id = p.user_id
         GROUP BY p.user_id
       ),
@@ -116,6 +123,7 @@ class LeaderboardQuery < ApplicationQuery
         SELECT tp.user_id, SUM(tps.total_points) AS tournament_points
         FROM tournament_prediction_scores tps
         JOIN tournament_predictions tp ON tp.id = tps.tournament_prediction_id
+                                       AND tp.tournament_id = :tournament_id
         JOIN members me ON me.user_id = tp.user_id
         GROUP BY tp.user_id
       ),

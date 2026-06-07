@@ -8,18 +8,21 @@ RSpec.describe "Api::V1::RankingsController", type: :request do
   let(:user)    { create(:user) }
   let(:headers) { { "User-Agent" => "rspec" } }
   let(:group)   { create(:group, owner: create(:user)) }
+  # The sole tournament, so CurrentTournamentQuery (resolved by the controller)
+  # returns it and the scoped leaderboard counts the scores created below.
+  let(:tournament) { create(:tournament) }
 
   # Adds a member with the given match points / exact count (see LeaderboardQuery spec).
   def add_member(target_group, member, points: 0, exact: 0)
     create(:group_membership, group: target_group, user: member)
     exact.times do
-      prediction = create(:prediction, user: member, match: create(:match))
+      prediction = create(:prediction, user: member, match: create(:match, tournament: tournament))
       create(:prediction_score, prediction: prediction, points_result: 1, multiplier: 1.0,
                                 breakdown: { "result_rule" => "exact_score" })
     end
     remaining = points - exact
     if remaining.positive?
-      prediction = create(:prediction, user: member, match: create(:match))
+      prediction = create(:prediction, user: member, match: create(:match, tournament: tournament))
       create(:prediction_score, prediction: prediction, points_result: remaining, multiplier: 1.0,
                                 breakdown: { "result_rule" => "correct_winner" })
     end

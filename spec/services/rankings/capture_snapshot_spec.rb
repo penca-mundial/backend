@@ -19,7 +19,7 @@ RSpec.describe Rankings::CaptureSnapshot do
   def stub_leaderboard(entries, group: nil)
     query = instance_double(LeaderboardQuery)
     allow(LeaderboardQuery).to receive(:new).and_return(query)
-    allow(query).to receive(:call).with(group: group, limit: nil).and_return(entries)
+    allow(query).to receive(:call).with(hash_including(group: group, limit: nil)).and_return(entries)
   end
 
   describe "#call" do
