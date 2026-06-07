@@ -146,6 +146,28 @@ RSpec.describe LeaderboardQuery do
       expect(rows.map(&:user_id)).to match_array(members.map(&:id))
     end
 
+    it "excludes system accounts from the global universe but keeps real users" do
+      real = user_with_scores(points: 5)
+      service_account = create(:user, :system)
+
+      rows = described_class.new.call(tournament: tournament)
+
+      expect(rows.map(&:user_id)).to include(real.id)       # regression: a real (system=false) user stays
+      expect(rows.map(&:user_id)).not_to include(service_account.id)
+    end
+
+    it "does NOT apply the system filter to the group universe (memberships rule there)" do
+      # In production a system account is never a member (the enrolment guard
+      # skips it); this pins that the new filter is scoped to the global branch.
+      member = member_with(group, points: 5)
+      service_account = create(:user, :system)
+      create(:group_membership, group: group, user: service_account)
+
+      rows = described_class.new.call(tournament: tournament, group: group)
+
+      expect(rows.map(&:user_id)).to contain_exactly(member.id, service_account.id)
+    end
+
     it "does not hit the database on a cache hit" do
       member_with(group, points: 5)
       cache = ActiveSupport::Cache::MemoryStore.new

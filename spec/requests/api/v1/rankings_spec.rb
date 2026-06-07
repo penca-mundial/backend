@@ -116,6 +116,17 @@ RSpec.describe "Api::V1::RankingsController", type: :request do
 
         expect(response).to have_http_status(:not_found)
       end
+
+      it "never lists the system service account, while real users stay" do
+        add_scores(user, points: 5)
+        service_account = create(:user, :system)
+
+        get "/api/v1/rankings/global", headers: headers
+
+        ids = response.parsed_body["entries"].map { |e| e["user_id"] }
+        expect(ids).to include(user.id) # regression: real (system=false) users still ranked
+        expect(ids).not_to include(service_account.id)
+      end
     end
   end
 
