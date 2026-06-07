@@ -2,12 +2,28 @@
 
 module Api
   module V1
-    # Rankings (leaderboards). Authenticated. Thin: it gates on membership and
-    # serializes LeaderboardQuery's rows. This is the canonical Phase 7 path;
-    # SCRUM-155 adds global/snapshots/evolution actions to this same controller.
+    # Rankings (leaderboards). Authenticated. Thin: it gates on membership (group
+    # variant only) and serializes LeaderboardQuery's rows. Both actions accept
+    # ?window=total|today|week (delta windows — see LeaderboardQuery). The
+    # historical snapshots / evolution endpoints are SCRUM-286.
     class RankingsController < BaseController
       MAX_LIMIT = 100
       DEFAULT_LIMIT = 100
+      WINDOWS = %w[total today week].freeze
+
+      # GET /api/v1/rankings/global — every user; no membership gate.
+      def global
+        tournament = current_tournament
+        entries = LeaderboardQuery.new.call(tournament: tournament, window: window, limit: limit)
+        me = if include_me?
+               LeaderboardQuery.new.position_of(current_user, tournament: tournament, window: window)
+        end
+
+        render json: {
+          entries: RankingEntryBlueprint.render_as_hash(entries),
+          me:      me && RankingEntryBlueprint.render_as_hash(me)
+        }
+      end
 
       # GET /api/v1/rankings/groups/:id
       def group
@@ -15,9 +31,9 @@ module Api
         return render_forbidden unless member?(group)
 
         tournament = current_tournament
-        entries = LeaderboardQuery.new.call(tournament: tournament, group: group, limit: limit)
+        entries = LeaderboardQuery.new.call(tournament: tournament, group: group, limit: limit, window: window)
         me = if include_me?
-               LeaderboardQuery.new.position_of(current_user, tournament: tournament, group: group)
+               LeaderboardQuery.new.position_of(current_user, tournament: tournament, group: group, window: window)
         end
 
         render json: {
@@ -45,6 +61,13 @@ module Api
 
       def include_me?
         ActiveModel::Type::Boolean.new.cast(params[:include_me])
+      end
+
+      # Known window or the cumulative default — mirrors limit's forgiving
+      # fallback instead of 400ing on junk input.
+      def window
+        raw = params[:window].to_s
+        WINDOWS.include?(raw) ? raw.to_sym : :total
       end
     end
   end
