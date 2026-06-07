@@ -41,7 +41,7 @@ RSpec.describe TournamentPrediction, type: :model do
     end
   end
 
-  describe "tournament membership" do
+  describe "tournament participation" do
     it "rejects a podium team from another tournament" do
       tournament = create(:tournament)
       outsider = create(:team)
@@ -49,6 +49,26 @@ RSpec.describe TournamentPrediction, type: :model do
 
       expect(prediction).not_to be_valid
       expect(prediction.errors[:champion_id]).to be_present
+    end
+
+    it "rejects a podium team tagged to the tournament that plays no matches (seed leftover)" do
+      tournament = create(:tournament)
+      create(:match, tournament: tournament) # the fixture exists...
+      leftover = create(:team, tournament: tournament) # ...but this team is not in it
+
+      prediction = build(:tournament_prediction, tournament: tournament, champion: leftover)
+
+      expect(prediction).not_to be_valid
+      expect(prediction.errors[:champion_id]).to be_present
+    end
+
+    it "accepts a podium team that actually plays in the fixture" do
+      tournament = create(:tournament)
+      match = create(:match, tournament: tournament)
+
+      prediction = build(:tournament_prediction, tournament: tournament, champion: match.home_team)
+
+      expect(prediction).to be_valid
     end
 
     it "rejects a top scorer whose team is in another tournament" do
@@ -59,6 +79,21 @@ RSpec.describe TournamentPrediction, type: :model do
       expect(prediction).not_to be_valid
       expect(prediction.errors[:top_scorer_id]).to be_present
     end
+
+    it "rejects a top scorer whose team plays no matches; accepts one whose team does" do
+      tournament = create(:tournament)
+      match = create(:match, tournament: tournament)
+      leftover = create(:team, tournament: tournament)
+
+      rejected = build(:tournament_prediction, tournament: tournament,
+                                               top_scorer: create(:player, team: leftover))
+      accepted = build(:tournament_prediction, tournament: tournament,
+                                               top_scorer: create(:player, team: match.home_team))
+
+      expect(rejected).not_to be_valid
+      expect(rejected.errors[:top_scorer_id]).to be_present
+      expect(accepted).to be_valid
+    end
   end
 
   describe "#locked?" do
@@ -66,14 +101,23 @@ RSpec.describe TournamentPrediction, type: :model do
       expect(build(:tournament_prediction, locked_at: Time.current)).to be_locked
     end
 
-    it "is locked once the tournament has started" do
-      tournament = create(:tournament, starts_at: 1.day.ago)
+    it "is NOT locked after starts_at while the first kickoff is still ahead" do
+      # The real-world bug: starts_at (midnight) passed but the opener is hours away.
+      tournament = create(:tournament, starts_at: 1.hour.ago)
+      create(:match, tournament: tournament, kickoff_at: 6.hours.from_now)
+
+      expect(build(:tournament_prediction, tournament: tournament)).not_to be_locked
+    end
+
+    it "is locked once the deadline (first kickoff - 1 minute) has passed" do
+      tournament = create(:tournament, starts_at: 1.day.from_now) # starts_at says open...
+      create(:match, tournament: tournament, kickoff_at: 30.seconds.from_now) # ...the fixture says locked
 
       expect(build(:tournament_prediction, tournament: tournament)).to be_locked
     end
 
-    it "is not locked before the tournament starts" do
-      tournament = create(:tournament, starts_at: 1.day.from_now)
+    it "is not locked while the fixture is empty" do
+      tournament = create(:tournament, starts_at: 1.day.ago)
 
       expect(build(:tournament_prediction, tournament: tournament)).not_to be_locked
     end

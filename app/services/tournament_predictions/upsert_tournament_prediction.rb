@@ -3,7 +3,8 @@
 module TournamentPredictions
   # Creates or updates a user's single tournament-wide prediction (podium +
   # top scorer). The only time-based rule lives here — the prediction closes at
-  # kickoff of the tournament and is irrevocable after that. The podium-distinct,
+  # the tournament's predictions_lock_at (one minute before the first kickoff,
+  # derived from the fixture) and is irrevocable after that. The podium-distinct,
   # teams-belong-to-tournament and top-scorer-belongs rules are TournamentPrediction
   # model validations, enforced here via update! (a failed save bubbles up as a
   # ServiceResult failure). All team/player ids are optional (partial picks are OK).
@@ -22,7 +23,7 @@ module TournamentPredictions
     end
 
     def call
-      raise_service_error("El torneo ya comenzó; el pronóstico está cerrado.") if @tournament.starts_at <= Time.current
+      raise_service_error("El pronóstico del torneo está cerrado.") if @tournament.predictions_locked?
 
       prediction = TournamentPrediction.find_or_initialize_by(user: @user, tournament: @tournament)
       prediction.update!(@attributes)

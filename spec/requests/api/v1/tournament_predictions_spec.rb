@@ -9,6 +9,13 @@ RSpec.describe "Api::V1::TournamentPredictionsController", type: :request do
   let(:headers)    { { "User-Agent" => "rspec" } }
   let(:tournament) { create(:tournament, starts_at: 1.week.from_now, ends_at: 5.weeks.from_now) }
 
+  # Picks must PARTICIPATE in the fixture (play a match), not just carry the tag.
+  def participating_team(in_tournament)
+    create(:team, tournament: in_tournament).tap do |team|
+      create(:match, tournament: in_tournament, home_team: team, kickoff_at: in_tournament.starts_at + 1.day)
+    end
+  end
+
   describe "GET /api/v1/tournament_predictions/me" do
     it "returns 401 when unauthenticated" do
       tournament
@@ -28,7 +35,7 @@ RSpec.describe "Api::V1::TournamentPredictionsController", type: :request do
       end
 
       it "returns the user's prediction when it exists" do
-        champion = create(:team, tournament: tournament)
+        champion = participating_team(tournament)
         create(:tournament_prediction, user: user, tournament: tournament, champion: champion)
 
         get "/api/v1/tournament_predictions/me", headers: headers
@@ -43,7 +50,7 @@ RSpec.describe "Api::V1::TournamentPredictionsController", type: :request do
     before { login_as(user, scope: :user) }
 
     it "creates the prediction" do
-      champion = create(:team, tournament: tournament)
+      champion = participating_team(tournament)
 
       expect do
         put "/api/v1/tournament_predictions", params: { champion_id: champion.id }, headers: headers
@@ -53,8 +60,9 @@ RSpec.describe "Api::V1::TournamentPredictionsController", type: :request do
       expect(response.parsed_body["champion_id"]).to eq(champion.id)
     end
 
-    it "returns 422 once the tournament has started" do
-      create(:tournament, starts_at: 1.day.ago, ends_at: 30.days.from_now)
+    it "returns 422 once the prediction deadline (first kickoff - 1 minute) has passed" do
+      started = create(:tournament, starts_at: 1.day.ago, ends_at: 30.days.from_now)
+      create(:match, tournament: started, kickoff_at: 30.seconds.from_now)
 
       put "/api/v1/tournament_predictions", params: {}, headers: headers
 
@@ -64,7 +72,7 @@ RSpec.describe "Api::V1::TournamentPredictionsController", type: :request do
     it "binds the prediction to the current tournament (resolver), not the first by id" do
       create(:tournament, starts_at: 1.month.ago, ends_at: 1.week.ago)                  # past, lower id
       current = create(:tournament, starts_at: 1.week.from_now, ends_at: 5.weeks.from_now) # upcoming
-      champion = create(:team, tournament: current)
+      champion = participating_team(current)
 
       put "/api/v1/tournament_predictions", params: { champion_id: champion.id }, headers: headers
 
