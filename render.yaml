@@ -20,7 +20,14 @@ services:
       - key: SOLID_QUEUE_IN_PUMA
         value: "true"
       # Secrets / per-environment values — set these in the Render dashboard.
-      - key: RAILS_MASTER_KEY
+      #
+      # The app is ENV-only: config/credentials.yml.enc holds nothing but the
+      # default secret_key_base (no code reads Rails.application.credentials),
+      # so production takes secret_key_base from SECRET_KEY_BASE directly — ENV
+      # wins over credentials and no RAILS_MASTER_KEY is needed. Set it to the
+      # value from `bin/rails credentials:show` (secret_key_base) so any
+      # already-issued signed cookies/sessions stay valid.
+      - key: SECRET_KEY_BASE
         sync: false
       - key: DATABASE_URL # Neon Postgres connection string
         sync: false
