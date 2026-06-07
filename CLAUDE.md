@@ -314,3 +314,20 @@ docker compose logs -f app    # optional, watch logs
 - For broader CSRF protection in our cookie-session API: SameSite=Lax + CORS allowlist (rack-cors) + Origin header verification.
 
 If you add a new OAuth provider, no extra CSRF config is needed — this is global.
+
+## Working rules (must follow)
+
+### Regression-test-first
+
+Before applying a bug fix, write or adjust a test that **FAILS against the code without the
+fix** — prove it reproduces the bug (show the red run) first. Only then apply the fix and
+verify the test goes green. A regression test that passes before the fix isn't reproducing
+the bug and is worthless.
+
+### STOP before touching high-blast-radius shared files
+
+`app/services/*` base (`app/services/service.rb`), `application_controller` /
+`base_controller`, `config/routes.rb`, and shared models are high-blast-radius: a change
+ripples across the whole app. Before editing any of them, **STOP and report the intended
+approach** (what, why, what could break) and wait for confirmation — do not edit them as a
+side effect of another change.
