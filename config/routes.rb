@@ -89,6 +89,11 @@ Rails.application.routes.draw do
       # /standings feed above.
       get "tournaments/:id/standings", to: "tournaments/standings#index"
 
+      # Per-user PROJECTED group tables: the official results blended with the
+      # current user's predictions for unplayed matches (ADR 0005). Same shape
+      # as the official endpoint above; authenticated, additive.
+      get "tournaments/:id/standings/projected", to: "tournaments/projected_standings#index"
+
       # Public teams index, scoped by ?tournament_id= (defaults to current).
       get "teams", to: "teams#index"
 
