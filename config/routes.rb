@@ -65,7 +65,9 @@ Rails.application.routes.draw do
       # Self-leave: the current user removes their own membership.
       delete "groups/:group_id/membership", to: "group_memberships#destroy"
 
-      # Rankings (leaderboards). Member-only group leaderboard; Phase 7 adds more.
+      # Rankings (leaderboards). Global (every user) and member-only group
+      # variants; both accept ?window=total|today|week.
+      get "rankings/global",     to: "rankings#global"
       get "rankings/groups/:id", to: "rankings#group"
 
       # Public fixture. Specific collection routes precede :id so they aren't
