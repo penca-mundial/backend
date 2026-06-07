@@ -14,8 +14,11 @@ module Api
         group = Group.find(params[:id])
         return render_forbidden unless member?(group)
 
-        entries = LeaderboardQuery.new.call(group: group, limit: limit)
-        me = include_me? ? LeaderboardQuery.new.position_of(current_user, group: group) : nil
+        tournament = current_tournament
+        entries = LeaderboardQuery.new.call(tournament: tournament, group: group, limit: limit)
+        me = if include_me?
+               LeaderboardQuery.new.position_of(current_user, tournament: tournament, group: group)
+        end
 
         render json: {
           entries: RankingEntryBlueprint.render_as_hash(entries),
@@ -24,6 +27,13 @@ module Api
       end
 
       private
+
+      # The leaderboard is scoped to the current tournament; pencas are
+      # cross-tournament (no tournament_id), so it's resolved externally here.
+      # 404 when there is no tournament at all.
+      def current_tournament
+        CurrentTournamentQuery.call || raise(ActiveRecord::RecordNotFound)
+      end
 
       # Positive, capped at MAX_LIMIT so callers can't inflate the cache key or
       # ask for an absurd page. Non-numeric / non-positive falls back to default.

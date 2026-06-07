@@ -18,11 +18,6 @@ module Rankings
   # scoring correction is picked up) without duplicating — including the global
   # case where group_id is NULL. upsert_all (not insert_all DO NOTHING) on purpose,
   # so a re-capture takes corrections.
-  #
-  # NOTE (single-tournament limitation): LeaderboardQuery is tournament-agnostic
-  # (it sums all of a user's scores, not scoped by tournament — SCRUM-149/284), so
-  # the captured points are tagged with the passed tournament but not yet filtered
-  # by it. Revisit when the leaderboard becomes tournament-scoped.
   class CaptureSnapshot < Service
     # Columns refreshed on conflict. Verified behaviour: created_at is always
     # PRESERVED (omitted here so the SET never touches it), and updated_at IS
@@ -37,7 +32,7 @@ module Rankings
     end
 
     def call
-      entries = LeaderboardQuery.new.call(group: @group, limit: nil)
+      entries = LeaderboardQuery.new.call(tournament: @tournament, group: @group, limit: nil)
       return success(count: 0) if entries.empty?
 
       rows = build_rows(entries)
