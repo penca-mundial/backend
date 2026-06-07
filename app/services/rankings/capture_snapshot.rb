@@ -24,9 +24,10 @@ module Rankings
   # the captured points are tagged with the passed tournament but not yet filtered
   # by it. Revisit when the leaderboard becomes tournament-scoped.
   class CaptureSnapshot < Service
-    # Columns refreshed on conflict. created_at is omitted so it is preserved;
-    # updated_at is omitted because upsert_all bumps it automatically (listing it
-    # too triggers "multiple assignments to same column").
+    # Columns refreshed on conflict. Verified behaviour: created_at is always
+    # PRESERVED (omitted here so the SET never touches it), and updated_at IS
+    # bumped automatically by upsert_all — which is exactly why it must NOT be
+    # listed too (doing so raises "multiple assignments to same column").
     UPSERT_COLUMNS = %i[points rank_position exact_count].freeze
 
     def initialize(tournament:, group: nil, snapshot_at: Time.current)
