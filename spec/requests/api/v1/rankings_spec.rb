@@ -69,6 +69,40 @@ RSpec.describe "Api::V1::RankingsController", type: :request do
         expect(response.parsed_body["me"]).to be_nil
       end
 
+      it "serves stable 25-row pages with page/has_more, and me rides along unpaginated" do
+        add_scores(user, points: 99) # the leader — and the "me" row
+        26.times { create(:user) }   # zero-point tail -> 27 users total
+
+        get "/api/v1/rankings/global", headers: headers
+        first_page = response.parsed_body
+        expect(first_page["entries"].size).to eq(25)
+        expect(first_page).to include("page" => 1, "has_more" => true)
+
+        get "/api/v1/rankings/global", params: { page: 2, include_me: true }, headers: headers
+        second_page = response.parsed_body
+        expect(second_page["entries"].size).to eq(2)
+        expect(second_page).to include("page" => 2, "has_more" => false)
+
+        # Stable order: no overlap, the two pages cover all 27 users.
+        ids = (first_page["entries"] + second_page["entries"]).map { |e| e["user_id"] }
+        expect(ids.uniq.size).to eq(27)
+
+        # me is the position_of window — present on page 2 even though the
+        # user's row itself sits on page 1.
+        expect(second_page["me"].map { |e| e["user_id"] }).to include(user.id)
+        expect(first_page["entries"].first["user_id"]).to eq(user.id)
+      end
+
+      it "keeps honoring the pre-pagination ?limit= as the page size" do
+        add_scores(user, points: 1)
+        26.times { create(:user) } # 27 users total
+
+        get "/api/v1/rankings/global", params: { limit: 27 }, headers: headers
+
+        expect(response.parsed_body["entries"].size).to eq(27)
+        expect(response.parsed_body["has_more"]).to be(false)
+      end
+
       it "returns window deltas (not cumulative points) with window=today, and total stays cumulative" do
         rival = create(:user)
         add_scores(user, points: 20)  # anchored at 18 -> today delta 2
@@ -167,6 +201,20 @@ RSpec.describe "Api::V1::RankingsController", type: :request do
         me = response.parsed_body["me"]
         expect(me).to be_an(Array)
         expect(me.map { |e| e["user_id"] }).to include(user.id)
+      end
+
+      it "paginates the group leaderboard with page/per_page" do
+        add_member(group, user, points: 9)
+        add_member(group, create(:user), points: 7)
+        add_member(group, create(:user), points: 5)
+
+        get "/api/v1/rankings/groups/#{group.id}", params: { page: 2, per_page: 2 }, headers: headers
+
+        body = response.parsed_body
+        expect(body["entries"].size).to eq(1)
+        expect(body).to include("page" => 2, "has_more" => false)
+        # Third by points — and rank_position stays the global rank, not the page-local one.
+        expect(body["entries"].first).to include("rank_position" => 3)
       end
 
       it "returns 403 when the current user is not a member" do

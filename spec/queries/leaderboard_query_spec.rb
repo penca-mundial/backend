@@ -296,4 +296,52 @@ RSpec.describe LeaderboardQuery do
       expect(described_class.new.position_of(outsider, tournament: tournament, group: group)).to eq([])
     end
   end
+
+  describe "#page" do
+    it "slices the global list into stable, non-overlapping default-size pages and flags has_more" do
+      top = user_with_scores(points: 50)
+      runner_up = user_with_scores(points: 30, exact: 1)
+      27.times { create(:user) } # zero-point tail -> 29 users total
+
+      page1 = described_class.new.page(tournament: tournament, number: 1)
+      page2 = described_class.new.page(tournament: tournament, number: 2)
+
+      expect(page1.entries.size).to eq(described_class::PAGE_SIZE)
+      expect(page1.has_more).to be(true)
+      expect(page2.entries.size).to eq(4)
+      expect(page2.has_more).to be(false)
+
+      # Same criteria as the unpaginated list: scored users lead page 1.
+      expect(page1.entries.first(2).map(&:user_id)).to eq([ top.id, runner_up.id ])
+
+      # Stable order: the two pages partition the full (unlimited) list exactly.
+      full = described_class.new.call(tournament: tournament, limit: nil)
+      expect((page1.entries + page2.entries).map(&:user_id)).to eq(full.map(&:user_id))
+
+      # rank_position stays global across pages: the 27 zero-point users all
+      # share rank 3, including those on page 2.
+      expect(page2.entries.map(&:rank_position)).to all(eq(3))
+    end
+
+    it "paginates a group with a custom page size" do
+      members = [ 9, 7, 5 ].map { |points| member_with(group, points: points) }
+
+      page1 = described_class.new.page(tournament: tournament, group: group, number: 1, per_page: 2)
+      page2 = described_class.new.page(tournament: tournament, group: group, number: 2, per_page: 2)
+
+      expect(page1.entries.map(&:user_id)).to eq(members.first(2).map(&:id))
+      expect(page1.has_more).to be(true)
+      expect(page2.entries.map(&:user_id)).to eq([ members.last.id ])
+      expect(page2.has_more).to be(false)
+    end
+
+    it "returns an empty page past the end" do
+      member_with(group, points: 1)
+
+      page = described_class.new.page(tournament: tournament, group: group, number: 9)
+
+      expect(page.entries).to eq([])
+      expect(page.has_more).to be(false)
+    end
+  end
 end
