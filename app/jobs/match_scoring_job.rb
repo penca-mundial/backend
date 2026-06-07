@@ -17,7 +17,8 @@ class MatchScoringJob < ApplicationJob
   discard_on ActiveRecord::RecordNotFound
 
   def perform(match_id)
-    result = Scoring::ComputeMatchScores.call(match: Match.find(match_id))
+    match = Match.find(match_id)
+    result = Scoring::ComputeMatchScores.call(match: match)
 
     if result.success?
       Rails.logger.info("MatchScoringJob: scored #{result.data[:count]} prediction(s) for match #{match_id}")
@@ -25,5 +26,11 @@ class MatchScoringJob < ApplicationJob
       # Scoring failures are deterministic — log and stop, don't re-raise/retry.
       Rails.logger.error("MatchScoringJob: scoring failed for match #{match_id}: #{result.errors.to_sentence}")
     end
+
+    # Chain a ranking-snapshot attempt for THIS match's UTC day. Passing the day
+    # (not "now") keeps it correct if the job runs past midnight UTC.
+    # RankingSnapshotJob no-ops until the day's last match is finished, and is
+    # idempotent, so triggering once per scored match is safe.
+    RankingSnapshotJob.perform_later(match.kickoff_at.utc.to_date.iso8601)
   end
 end

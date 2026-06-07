@@ -34,5 +34,12 @@ RSpec.describe MatchScoringJob do
       expect { described_class.perform_now(0) }.not_to raise_error
       expect(Scoring::ComputeMatchScores).not_to have_received(:call)
     end
+
+    it "chains RankingSnapshotJob with the match's UTC day after scoring" do
+      allow(Scoring::ComputeMatchScores).to receive(:call).and_return(ServiceResult.new(data: { count: 1 }))
+
+      expect { described_class.perform_now(match.id) }
+        .to have_enqueued_job(RankingSnapshotJob).with(match.kickoff_at.utc.to_date.iso8601)
+    end
   end
 end
