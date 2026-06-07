@@ -22,7 +22,7 @@ class TournamentPrediction < ApplicationRecord
   def locked?
     return true if locked_at.present?
 
-    tournament.starts_at <= Time.current
+    tournament.predictions_locked?
   end
 
   private
@@ -38,12 +38,14 @@ class TournamentPrediction < ApplicationRecord
     errors.add(:base, :duplicate_podium)
   end
 
+  # Participation (the team plays a match of the fixture), not the mere
+  # tournament tag — seed leftovers tagged to the tournament are not pickable.
   def podium_teams_belong_to_tournament
     return if tournament.nil?
 
     PODIUM_SPOTS.each do |spot|
       team = public_send(spot)
-      next if team.nil? || team.tournament_id == tournament_id
+      next if team.nil? || tournament.participating_team_ids.include?(team.id)
 
       errors.add(:"#{spot}_id", :not_in_tournament)
     end
@@ -51,7 +53,8 @@ class TournamentPrediction < ApplicationRecord
 
   def top_scorer_belongs_to_tournament
     return if top_scorer.nil? || tournament.nil?
-    return if top_scorer.team&.tournament_id == tournament_id
+    # Through the association (not the raw FK) so not-yet-saved graphs resolve.
+    return if tournament.participating_team_ids.include?(top_scorer.team&.id)
 
     errors.add(:top_scorer_id, :not_in_tournament)
   end

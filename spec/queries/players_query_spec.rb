@@ -11,12 +11,14 @@ RSpec.describe PlayersQuery do
     expect(described_class.call(filters: { team_id: team.id })).to eq([ keep ])
   end
 
-  it "filters by tournament_id through the player's team" do
+  it "filters by tournament_id to players of PARTICIPATING teams only" do
     tournament = create(:tournament)
     team_a = create(:team, tournament: tournament)
     team_b = create(:team, tournament: tournament)
+    create(:match, tournament: tournament, home_team: team_a, away_team: team_b)
     p1 = create(:player, team: team_a, name: "Aaron")
     p2 = create(:player, team: team_b, name: "Zoe")
+    create(:player, team: create(:team, tournament: tournament)) # tagged team with no matches
     create(:player) # another tournament
 
     expect(described_class.call(filters: { tournament_id: tournament.id })).to eq([ p1, p2 ])

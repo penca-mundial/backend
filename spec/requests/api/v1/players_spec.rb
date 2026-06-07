@@ -8,9 +8,16 @@ RSpec.describe "Api::V1::PlayersController", type: :request do
   let(:headers) { { "User-Agent" => "rspec" } }
   let(:tournament) { create(:tournament, starts_at: 1.day.ago, ends_at: 1.week.from_now) }
 
+  # The tournament-scoped index only lists players of PARTICIPATING teams.
+  def participating_team(in_tournament: tournament, **attrs)
+    create(:team, tournament: in_tournament, **attrs).tap do |team|
+      create(:match, tournament: in_tournament, home_team: team)
+    end
+  end
+
   describe "GET /api/v1/players" do
     it "returns the current tournament's players, paginated and ordered by name, publicly" do
-      team = create(:team, tournament: tournament)
+      team = participating_team
       create(:player, team: team, name: "Zoe", external_id: "p-zoe")
       create(:player, team: team, name: "Aaron")
 
@@ -36,9 +43,10 @@ RSpec.describe "Api::V1::PlayersController", type: :request do
       expect(response.parsed_body.map { |p| p["id"] }).to eq([ mine.id ])
     end
 
-    it "filters by tournament_id through teams" do
-      team = create(:team, tournament: tournament)
+    it "filters by tournament_id through PARTICIPATING teams" do
+      team = participating_team
       mine = create(:player, team: team, name: "Mine")
+      create(:player, team: create(:team, tournament: tournament)) # tagged team, no matches: excluded
       create(:player) # a player in some other tournament
 
       get "/api/v1/players", params: { tournament_id: tournament.id }, headers: headers
@@ -48,8 +56,8 @@ RSpec.describe "Api::V1::PlayersController", type: :request do
 
     it "defaults to the current tournament (resolver), not the first by id" do
       past = create(:tournament, starts_at: 1.month.ago, ends_at: 1.week.ago) # lower id
-      create(:player, team: create(:team, tournament: past), name: "OldPlayer")
-      current_player = create(:player, team: create(:team, tournament: tournament), name: "CurrentPlayer")
+      create(:player, team: participating_team(in_tournament: past), name: "OldPlayer")
+      current_player = create(:player, team: participating_team, name: "CurrentPlayer")
 
       get "/api/v1/players", headers: headers
 
@@ -57,7 +65,7 @@ RSpec.describe "Api::V1::PlayersController", type: :request do
     end
 
     it "paginates with ?per_page and exposes the total count" do
-      team = create(:team, tournament: tournament)
+      team = participating_team
       create_list(:player, 3, team: team)
 
       get "/api/v1/players", params: { per_page: 2 }, headers: headers

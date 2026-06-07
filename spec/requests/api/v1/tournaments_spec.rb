@@ -13,6 +13,8 @@ RSpec.describe "Api::V1::TournamentsController", type: :request do
                           name: "FIFA World Cup 2026",
                           starts_at: 2.days.from_now, ends_at: 32.days.from_now,
                           external_code: "WC")
+      # The lock/countdown derive from the fixture's first kickoff, not starts_at.
+      create(:match, tournament: tournament, kickoff_at: 2.days.from_now + 19.hours)
 
       get "/api/v1/tournaments/current", headers: headers
 
@@ -30,12 +32,24 @@ RSpec.describe "Api::V1::TournamentsController", type: :request do
       expect(body["seconds_until_kickoff"]).to be > 0
     end
 
-    it "marks an already-started tournament as locked with a zero countdown" do
-      create(:tournament, starts_at: 1.day.ago, ends_at: 1.week.from_now)
+    it "marks a tournament whose first match kicked off as locked with a zero countdown" do
+      tournament = create(:tournament, starts_at: 1.day.ago, ends_at: 1.week.from_now)
+      create(:match, tournament: tournament, kickoff_at: 1.hour.ago)
 
       get "/api/v1/tournaments/current", headers: headers
 
       expect(response.parsed_body).to include("is_locked" => true, "seconds_until_kickoff" => 0)
+    end
+
+    it "stays open (with a live countdown) after starts_at while the opener is still ahead" do
+      # The real-world case: starts_at is the calendar day, the opener kicks off hours later.
+      tournament = create(:tournament, starts_at: 2.hours.ago, ends_at: 1.week.from_now)
+      create(:match, tournament: tournament, kickoff_at: 5.hours.from_now)
+
+      get "/api/v1/tournaments/current", headers: headers
+
+      expect(response.parsed_body["is_locked"]).to be(false)
+      expect(response.parsed_body["seconds_until_kickoff"]).to be_between(1, 5.hours.to_i)
     end
 
     it "resolves by precedence (an active tournament beats an existing past one), not by id" do

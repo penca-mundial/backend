@@ -62,9 +62,11 @@ RSpec.describe Scoring::ComputeTournamentScores do
   end
 
   it "awards no podium points when the source match is missing or unfinished" do
-    # Only the final is finished; there is no third-place match.
+    # Only the final is finished; there is no third-place match. The picked team
+    # still participates (a group-stage match) so the prediction itself is valid.
     create(:match, :final, tournament: tournament, home_team: teams[:champion], away_team: teams[:runner_up],
                            status: "finished", advancing_team: teams[:champion])
+    create(:match, tournament: tournament, home_team: teams[:third], away_team: teams[:fourth])
     prediction = create(:tournament_prediction, tournament: tournament, user: create(:user),
                         champion: teams[:champion], third_place: teams[:third])
 

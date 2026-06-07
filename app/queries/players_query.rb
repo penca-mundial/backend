@@ -22,7 +22,9 @@ class PlayersQuery < ApplicationQuery
 
   private
 
+  # Players of the tournament's PARTICIPATING teams (those in the fixture), not
+  # of every team tagged with the tournament_id (seed leftovers stay out).
   def by_tournament(scope, tournament_id)
-    scope.where(team_id: Team.where(tournament_id: tournament_id).select(:id))
+    scope.where(team_id: Tournament.find(tournament_id).participating_team_ids)
   end
 end

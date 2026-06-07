@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Tournament, type: :model do
+  include ActiveSupport::Testing::TimeHelpers
+
   it "has a valid factory" do
     expect(build(:tournament)).to be_valid
   end
@@ -68,6 +70,60 @@ RSpec.describe Tournament, type: :model do
     tournament.update!(champion: team)
 
     expect(tournament.reload.champion).to eq(team)
+  end
+
+  describe "#predictions_lock_at" do
+    it "is one minute before the first kickoff of the fixture" do
+      tournament = create(:tournament)
+      create(:match, tournament: tournament, kickoff_at: Time.utc(2026, 6, 11, 19, 0))
+      create(:match, tournament: tournament, kickoff_at: Time.utc(2026, 6, 12, 16, 0))
+
+      expect(tournament.predictions_lock_at).to eq(Time.utc(2026, 6, 11, 18, 59))
+    end
+
+    it "is nil when the fixture has not been ingested yet" do
+      expect(create(:tournament).predictions_lock_at).to be_nil
+    end
+  end
+
+  describe "#predictions_locked?" do
+    it "locks exactly AT the deadline (boundary: lock_at == now)" do
+      freeze_time do
+        tournament = create(:tournament)
+        create(:match, tournament: tournament, kickoff_at: 1.minute.from_now)
+
+        expect(tournament).to be_predictions_locked
+      end
+    end
+
+    it "is still open one second before the deadline" do
+      freeze_time do
+        tournament = create(:tournament)
+        create(:match, tournament: tournament, kickoff_at: 1.minute.from_now + 1.second)
+
+        expect(tournament).not_to be_predictions_locked
+      end
+    end
+
+    it "never locks while there are no matches (no deadline to derive)" do
+      expect(create(:tournament, starts_at: 1.year.ago)).not_to be_predictions_locked
+    end
+  end
+
+  describe "#participating_team_ids" do
+    it "returns the distinct home/away ids of the fixture, ignoring tagged-only teams" do
+      # Unresolved knockout matches never exist as rows (create-on-resolve,
+      # ADR 0001), so nil team slots cannot occur; .compact is pure defense.
+      tournament = create(:tournament)
+      a = create(:team, tournament: tournament)
+      b = create(:team, tournament: tournament)
+      c = create(:team, tournament: tournament)
+      create(:team, tournament: tournament) # tagged to the tournament but plays no match
+      create(:match, tournament: tournament, home_team: a, away_team: b)
+      create(:match, tournament: tournament, home_team: a, away_team: c) # a repeats: ids stay distinct
+
+      expect(tournament.participating_team_ids).to contain_exactly(a.id, b.id, c.id)
+    end
   end
 
   describe ".active" do
