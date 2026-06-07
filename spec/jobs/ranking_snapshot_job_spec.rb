@@ -6,7 +6,9 @@ RSpec.describe RankingSnapshotJob do
   let(:tournament) { create(:tournament) } # the only tournament -> the "current" one
   let(:day) { Date.new(2026, 6, 15) }
   let(:day_iso) { day.iso8601 }
-  let(:day_start) { day.beginning_of_day.utc }
+  # Pinned literal, NOT derived via the job's own expression (that would
+  # self-mask a TZ-dependent bug in how the job computes the day start).
+  let(:day_start) { Time.utc(2026, 6, 15) }
 
   def match_on(hours_into_day, status:)
     create(:match, tournament: tournament, status: status, kickoff_at: day_start + hours_into_day)
@@ -42,7 +44,7 @@ RSpec.describe RankingSnapshotJob do
 
     row = RankingSnapshot.find_by(user_id: user.id)
     expect(row).to have_attributes(group_id: nil, tournament_id: tournament.id, points: 10)
-    expect(row.snapshot_at).to eq(day_start) # normalized to UTC midnight
+    expect(row.snapshot_at).to eq(Time.utc(2026, 6, 15)) # normalized to UTC midnight
   end
 
   it "no-ops without error when there are no matches" do
@@ -68,13 +70,14 @@ RSpec.describe RankingSnapshotJob do
     # A finished match today, nothing pending -> captures under today's UTC day.
     user = create(:user)
     today = Time.now.utc.to_date
+    today_start_utc = Time.utc(today.year, today.month, today.day) # explicit UTC midnight, not the job's expression
     match = create(:match, tournament: tournament, status: "finished",
-                           kickoff_at: today.beginning_of_day.utc + 12.hours)
+                           kickoff_at: today_start_utc + 12.hours)
     create(:prediction_score, prediction: create(:prediction, user: user, match: match),
                               points_result: 3, multiplier: 1.0, breakdown: { "result_rule" => "exact_score" })
 
     described_class.perform_now
 
-    expect(RankingSnapshot.find_by(user_id: user.id).snapshot_at).to eq(today.beginning_of_day.utc)
+    expect(RankingSnapshot.find_by(user_id: user.id).snapshot_at).to eq(today_start_utc)
   end
 end

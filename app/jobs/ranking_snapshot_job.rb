@@ -19,7 +19,10 @@ class RankingSnapshotJob < ApplicationJob
     return unless tournament
 
     day = date_iso ? Date.iso8601(date_iso) : Time.now.utc.to_date
-    day_start = day.beginning_of_day.utc
+    # NOT day.beginning_of_day.utc: that anchors midnight in the SYSTEM zone and
+    # then converts, shifting snapshot_at/window on any non-UTC host. to_time(:utc)
+    # is midnight UTC of the date regardless of system TZ.
+    day_start = day.to_time(:utc)
 
     # Not the last finished match of the day yet → wait for a later trigger.
     return if pending_matches?(tournament, day_start)
