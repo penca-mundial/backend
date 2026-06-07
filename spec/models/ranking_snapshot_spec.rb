@@ -42,5 +42,47 @@ RSpec.describe RankingSnapshot, type: :model do
     it "rejects a non-positive rank_position" do
       expect(build(:ranking_snapshot, rank_position: 0)).not_to be_valid
     end
+
+    it "requires a tournament (even for a global snapshot)" do
+      expect(build(:ranking_snapshot, tournament: nil)).not_to be_valid
+    end
+
+    it "rejects a negative exact_count" do
+      expect(build(:ranking_snapshot, exact_count: -1)).not_to be_valid
+    end
+  end
+
+  describe ".for_tournament" do
+    it "returns only rows for the given tournament" do
+      tournament = create(:tournament)
+      scoped = create(:ranking_snapshot, tournament: tournament)
+      create(:ranking_snapshot, tournament: create(:tournament))
+
+      expect(described_class.for_tournament(tournament)).to contain_exactly(scoped)
+    end
+  end
+
+  # The unique index uses NULLS NOT DISTINCT so the global case (group_id NULL)
+  # is deduplicated by the DB — without it CaptureSnapshot would duplicate global
+  # rows. There is no model-level uniqueness validation, so this is enforced at
+  # the database layer (RecordNotUnique).
+  describe "global-snapshot idempotency" do
+    it "rejects a duplicate global row for the same (user, tournament, snapshot_at) with group_id NULL" do
+      attrs = { user: create(:user), tournament: create(:tournament), group: nil, snapshot_at: Time.current }
+      create(:ranking_snapshot, **attrs)
+
+      expect { create(:ranking_snapshot, **attrs) }.to raise_error(ActiveRecord::RecordNotUnique)
+    end
+
+    it "allows the same (user, tournament, snapshot_at) across different groups" do
+      user = create(:user)
+      tournament = create(:tournament)
+      at = Time.current
+      create(:ranking_snapshot, user: user, tournament: tournament, group: create(:group), snapshot_at: at)
+
+      expect do
+        create(:ranking_snapshot, user: user, tournament: tournament, group: create(:group), snapshot_at: at)
+      end.not_to raise_error
+    end
   end
 end
