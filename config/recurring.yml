@@ -31,3 +31,10 @@ production:
     class: FixtureResyncJob
     queue: sync
     schedule: every 3 hours
+  snapshot_cleanup:
+    # Retention sweep for ranking snapshots (60-day window). 04:00 is UTC: the
+    # app runs with Time.zone = UTC, so Solid Queue computes the next run from a
+    # UTC clock. A quiet hour, well clear of the daily snapshot captures.
+    class: SnapshotCleanupJob
+    queue: default
+    schedule: every day at 04:00
