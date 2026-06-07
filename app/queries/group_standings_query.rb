@@ -35,15 +35,19 @@ class GroupStandingsQuery < ApplicationQuery
 
   # Group-stage matches of this tournament that carry a group label, preloaded
   # to keep the per-team team reads N+1-free, grouped and ordered A..L.
+  # Memoized so subclasses (ProjectedGroupStandingsQuery) can derive data from
+  # the full match set without re-running the query.
   def matches_by_group
-    base = relation || Match.all
-    base
-      .where(tournament: @tournament, phase: "group_stage")
-      .where.not(group: [ nil, "" ])
-      .includes(:home_team, :away_team)
-      .group_by(&:group)
-      .sort
-      .to_h
+    @matches_by_group ||= begin
+      base = relation || Match.all
+      base
+        .where(tournament: @tournament, phase: "group_stage")
+        .where.not(group: [ nil, "" ])
+        .includes(:home_team, :away_team)
+        .group_by(&:group)
+        .sort
+        .to_h
+    end
   end
 
   # Every team in the group starts at zero; finished matches then feed the tally.
