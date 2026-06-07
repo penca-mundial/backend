@@ -119,6 +119,15 @@ RSpec.describe LeaderboardQuery do
       expect(rows.map(&:rank_position)).to eq([ 1, 2 ])
     end
 
+    it "returns every member with limit: nil (the snapshot-capture path, no truncation)" do
+      members = Array.new(3) { |i| member_with(group, points: i + 1) }
+
+      rows = described_class.new.call(tournament: tournament, group: group, limit: nil)
+
+      expect(rows.size).to eq(3)
+      expect(rows.map(&:user_id)).to match_array(members.map(&:id))
+    end
+
     it "does not hit the database on a cache hit" do
       member_with(group, points: 5)
       cache = ActiveSupport::Cache::MemoryStore.new
