@@ -36,6 +36,7 @@ class LeaderboardQuery < ApplicationQuery
   LIVE_TTL = 30.seconds
   IDLE_TTL = 5.minutes
   DEFAULT_LIMIT = 100
+  PAGE_SIZE = 25 # default page size for #page (the rankings API)
   NEIGHBORS = 2 # rows shown above/below the user in #position_of
 
   # window name => days back from today's UTC midnight to the window start.
@@ -46,19 +47,35 @@ class LeaderboardQuery < ApplicationQuery
     keyword_init: true
   )
 
+  # One page of the ranked list: the page's rows plus whether another page
+  # follows. rank_position stays the GLOBAL rank (the window function runs
+  # before LIMIT/OFFSET), so page 2 starts at the rank it would have on the
+  # full list.
+  Page = Struct.new(:entries, :has_more, keyword_init: true)
+
   # The ranked rows (cached). tournament is REQUIRED — points and exact_count are
   # scoped to it. group: nil ranks every user (global), otherwise the group's
   # members. The cache key includes tournament.id and window so two tournaments
-  # (or two windows) never share an entry.
-  def call(tournament:, group: nil, limit: DEFAULT_LIMIT, window: :total)
+  # (or two windows) never share an entry. ROW_NUMBER's user_id tiebreak makes
+  # the order fully deterministic, so limit/offset slices never overlap or skip.
+  def call(tournament:, group: nil, limit: DEFAULT_LIMIT, offset: 0, window: :total)
     validate_window!(window)
-    key = [ "leaderboard", tournament.id, group&.id, limit, window ]
+    key = [ "leaderboard", tournament.id, group&.id, limit, offset, window ]
     cached = Rails.cache.read(key)
     return cached if cached
 
-    rows = run(leaderboard_sql(group, window), binds(tournament, group, window, limit: limit))
+    rows = run(leaderboard_sql(group, window), binds(tournament, group, window, limit: limit, offset: offset))
     Rails.cache.write(key, rows, expires_in: ttl)
     rows
+  end
+
+  # One page (1-based) of the ranked rows. Fetches a single extra row to learn
+  # whether another page follows — no COUNT over the (possibly ~100k-user)
+  # universe, and the +1 row rides the same cached query.
+  def page(tournament:, group: nil, window: :total, number: 1, per_page: PAGE_SIZE)
+    rows = call(tournament: tournament, group: group, window: window,
+                limit: per_page + 1, offset: (number - 1) * per_page)
+    Page.new(entries: rows.first(per_page), has_more: rows.size > per_page)
   end
 
   # The user's row plus up to NEIGHBORS rows above and below it (a small context
@@ -117,6 +134,7 @@ class LeaderboardQuery < ApplicationQuery
       FROM ranked
       ORDER BY row_number
       LIMIT :limit
+      OFFSET :offset
     SQL
   end
 
