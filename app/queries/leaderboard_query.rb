@@ -217,7 +217,15 @@ class LeaderboardQuery < ApplicationQuery
     window == :total ? "" : "\nLEFT JOIN anchor a ON a.user_id = m.user_id"
   end
 
-  # The universe of ranked users: a group's members, or every user.
+  # The universe of ranked users: a group's members, or every non-system user.
+  # The global branch excludes service accounts (users.system, NOT NULL default
+  # false; IS NOT TRUE stays correct even if the constraint ever relaxes) — the
+  # system user exists only to own records and must not be ranked. The group
+  # branch needs no filter: membership rules there, and the enrolment guard
+  # keeps system accounts out of every group. Old GLOBAL snapshots may carry a
+  # system row, but snapshots are only read as the delta ANCHOR (joined back to
+  # this CTE) — entries always come from the live, filtered universe, so no
+  # snapshot cleanup is needed.
   def members_cte(group)
     if group
       <<~SQL
@@ -233,6 +241,7 @@ class LeaderboardQuery < ApplicationQuery
         members AS (
           SELECT u.id AS user_id, u.username, u.avatar_url
           FROM users u
+          WHERE u.system IS NOT TRUE
         )
       SQL
     end

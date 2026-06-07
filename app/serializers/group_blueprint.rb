@@ -11,9 +11,11 @@ class GroupBlueprint < Blueprinter::Base
   fields :name, :description, :code, :is_general_pool, :created_at
 
   # Who created the group. Callers must preload :owner (see GroupsController
-  # index/show) so listing many groups stays N+1-free.
+  # index/show) so listing many groups stays N+1-free. A system owner (the
+  # general pool's service account) is hidden — it must not be visible anywhere.
   field :owner_username do |group|
-    group.owner&.username
+    owner = group.owner
+    owner&.system? ? nil : owner&.username
   end
 
   field :member_count do |group, options|
