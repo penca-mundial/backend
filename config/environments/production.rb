@@ -19,16 +19,25 @@ Rails.application.configure do
   # config.asset_host = "http://assets.example.com"
 
   # Store uploaded files on the local file system (see config/storage.yml for options).
+  # NOTE: Active Storage is currently UNUSED — no has_one_attached/has_many_attached
+  # anywhere in app/, and user avatars are remote Google URLs, not uploads. Render's
+  # disk is ephemeral, so if file uploads are ever added, switch this to a persistent
+  # service (S3/R2) first.
   config.active_storage.service = :local
 
-  # Assume all access to the app is happening through a SSL-terminating reverse proxy.
-  # config.assume_ssl = true
+  # Requests that need to skip SSL redirect and host authorization: the health
+  # check endpoints are probed over plain HTTP behind Render's proxy.
+  health_check = ->(request) { request.path == "/up" || request.path == "/api/v1/health" }
+
+  # Assume all access to the app is happening through a SSL-terminating reverse proxy
+  # (Render terminates TLS and forwards X-Forwarded-Proto).
+  config.assume_ssl = true
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  # config.force_ssl = true
+  config.force_ssl = true
 
-  # Skip http-to-https redirect for the default health check endpoint.
-  # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
+  # Skip http-to-https redirect for the health check endpoints.
+  config.ssl_options = { redirect: { exclude: health_check } }
 
   # Log to STDOUT with the current request id as a default log tag.
   config.log_tags = [ :request_id ]
@@ -58,7 +67,17 @@ Rails.application.configure do
   config.action_mailer.delivery_method = :resend
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: ENV.fetch("FRONTEND_URL", "https://example.com") }
+  #
+  # Mail links must point at THIS service, not the SPA: Devise's confirmation
+  # link hits /users/confirmation on the backend first (it confirms the user)
+  # and only then redirects to FRONTEND_URL/confirm-email — same flow as
+  # development, where the mailer host is localhost:3000. Render injects
+  # RENDER_EXTERNAL_HOSTNAME (bare hostname, no scheme); the protocol is passed
+  # separately, as url_for expects.
+  config.action_mailer.default_url_options = {
+    host: ENV.fetch("RENDER_EXTERNAL_HOSTNAME", "example.com"),
+    protocol: "https"
+  }
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via bin/rails credentials:edit.
   # config.action_mailer.smtp_settings = {
@@ -79,12 +98,15 @@ Rails.application.configure do
   # Only use :id for inspections in production.
   config.active_record.attributes_for_inspect = [ :id ]
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  #
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # Enable DNS rebinding protection and other `Host` header attacks. Rails
+  # leaves host authorization OFF in production when config.hosts is empty, so
+  # we only get protection by adding the real hostname. Render injects
+  # RENDER_EXTERNAL_HOSTNAME automatically; when it is absent (e.g. a local
+  # production-like boot) the list stays empty and authorization stays off.
+  if ENV["RENDER_EXTERNAL_HOSTNAME"].present?
+    config.hosts << ENV["RENDER_EXTERNAL_HOSTNAME"]
+
+    # Skip DNS rebinding protection for the health check endpoints.
+    config.host_authorization = { exclude: health_check }
+  end
 end
