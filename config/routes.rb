@@ -69,6 +69,8 @@ Rails.application.routes.draw do
       # variants; both accept ?window=total|today|week.
       get "rankings/global",     to: "rankings#global"
       get "rankings/groups/:id", to: "rankings#group"
+      # Multi-line points/rank evolution for a penca's stats chart (SCRUM-286).
+      get "rankings/groups/:id/evolution", to: "rankings#group_evolution"
 
       # Public fixture. Specific collection routes precede :id so they aren't
       # swallowed by the show route.
