@@ -50,7 +50,7 @@ RSpec.describe Users::UpdateProfile do
       result = described_class.call(user: user, attributes: { username: "no" })
 
       expect(result).to be_failure
-      expect(result.errors.join).to match(/[Uu]sername/)
+      expect(result.errors.join).to match(/Nombre de usuario/)
     end
   end
 end

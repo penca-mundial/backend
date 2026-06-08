@@ -86,7 +86,7 @@ RSpec.describe "Api::V1::BaseController", type: :request do
       get "/api/v1/probes/record_invalid"
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body.dig("error", "code")).to eq("validation_error")
-      expect(response.parsed_body.dig("error", "details", "errors")).to include("Email can't be blank")
+      expect(response.parsed_body.dig("error", "details", "errors")).to include("Email no puede estar en blanco")
     end
 
     it "rescues Penca::ServiceError as 422 with the message" do

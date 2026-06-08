@@ -45,6 +45,11 @@ gem "rack-attack"
 # Pagination for API collections
 gem "kaminari"
 
+# Spanish (and other) translations for the standard ActiveModel/ActiveRecord
+# error messages (blank, taken, too_short, …). App-specific copy still lives in
+# config/locales/*.yml.
+gem "rails-i18n"
+
 # Transactional email via Resend (production delivery method)
 gem "resend"
 

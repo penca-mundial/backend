@@ -19,7 +19,7 @@ RSpec.describe Users::ClaimUsername do
 
         expect(result).to be_failure
         expect(result.data).to include(code: "validation_error", status: :unprocessable_content)
-        expect(result.errors.join).to match(/[Uu]sername/)
+        expect(result.errors.join).to match(/Nombre de usuario/)
       end
 
       it "returns a 422-shaped failure when the username is already taken" do
@@ -29,7 +29,7 @@ RSpec.describe Users::ClaimUsername do
 
         expect(result).to be_failure
         expect(result.data[:status]).to eq(:unprocessable_content)
-        expect(result.errors.join).to match(/[Uu]sername/)
+        expect(result.errors.join).to match(/Nombre de usuario/)
       end
     end
 

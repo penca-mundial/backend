@@ -43,9 +43,13 @@ es:
       not_a_member: "El usuario no es integrante del grupo."
   activerecord:
     # Attribute names used as the prefix of validation full messages
-    # ("Contraseña apareció en…"). Without these the prefix renders in English.
+    # ("Contraseña apareció en…", "Nombre de usuario no es válido"). Without
+    # these the prefix renders in English (rails-i18n only ships the generic
+    # message bodies, not app-specific attribute names).
     attributes:
       user:
+        email: "Email"
+        username: "Nombre de usuario"
         password: "Contraseña"
     errors:
       models:
