@@ -38,3 +38,7 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      # Custom domain(s) for host authorization (comma-separated) — Render only
+      # injects its own *.onrender.com hostname in RENDER_EXTERNAL_HOSTNAME.
+      - key: APP_CUSTOM_HOST
+        sync: false
