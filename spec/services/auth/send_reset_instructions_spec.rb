@@ -3,12 +3,15 @@
 require "rails_helper"
 
 RSpec.describe Auth::SendResetInstructions do
+  include ActiveJob::TestHelper
+
   describe ".call" do
     it "sends a reset email when the address belongs to a user" do
       user = create(:user, email: "alice@example.com")
       ActionMailer::Base.deliveries.clear
 
-      result = described_class.call(email: user.email)
+      result = nil
+      perform_enqueued_jobs { result = described_class.call(email: user.email) }
 
       expect(result).to be_success
       expect(ActionMailer::Base.deliveries.last.to).to eq([ user.email ])
@@ -27,7 +30,7 @@ RSpec.describe Auth::SendResetInstructions do
       user = create(:user, email: "case@example.com")
       ActionMailer::Base.deliveries.clear
 
-      described_class.call(email: "CASE@Example.COM")
+      perform_enqueued_jobs { described_class.call(email: "CASE@Example.COM") }
 
       expect(ActionMailer::Base.deliveries.last.to).to eq([ user.email ])
     end

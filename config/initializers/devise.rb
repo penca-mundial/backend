@@ -19,10 +19,11 @@ Devise.setup do |config|
   # config.parent_controller = 'DeviseController'
 
   # ==> Mailer Configuration
-  # Configure the e-mail address which will be shown in Devise::Mailer,
-  # note that it will be overwritten if you use your own mailer class
-  # with default "from" parameter.
-  config.mailer_sender = ENV.fetch("MAIL_FROM", "Penca Mundial <no-reply@penca.local>")
+  # The sender shown in Devise::Mailer (confirmation, reset). A callable so the
+  # address is read from MAILER_FROM at delivery time, sharing the single source
+  # of truth with ApplicationMailer instead of hardcoding @penca.local.
+  # Variadic: Devise calls this with the scope mapping as an argument.
+  config.mailer_sender = ->(*) { ApplicationMailer.from_address }
 
   # Configure the class responsible to send e-mails.
   # config.mailer = 'Devise::Mailer'

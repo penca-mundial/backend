@@ -4,6 +4,8 @@ require "rails_helper"
 require "digest"
 
 RSpec.describe "POST /api/v1/auth/signup", type: :request do # rubocop:disable RSpec/DescribeClass
+  include ActiveJob::TestHelper
+
   let(:valid_params) do
     { email: "alice@example.com", password: "Sup3rSecret9", username: "alice_99" }
   end
@@ -31,14 +33,42 @@ RSpec.describe "POST /api/v1/auth/signup", type: :request do # rubocop:disable R
       expect(User.find_by!(email: "alice@example.com").confirmed_at).to be_nil
     end
 
-    it "sends the confirmation email to the new user" do
+    it "enqueues the confirmation email asynchronously (deliver_later, not sync)" do
       expect do
         post "/api/v1/auth/signup", params: valid_params, headers: headers
-      end.to change { ActionMailer::Base.deliveries.size }.by(1)
+      end.to have_enqueued_mail(Devise::Mailer, :confirmation_instructions)
+
+      # Nothing was delivered synchronously inside the request.
+      expect(ActionMailer::Base.deliveries).to be_empty
+    end
+
+    it "delivers the confirmation to the new user when the job runs" do
+      perform_enqueued_jobs do
+        post "/api/v1/auth/signup", params: valid_params, headers: headers
+      end
 
       mail = ActionMailer::Base.deliveries.last
       expect(mail.to).to eq([ "alice@example.com" ])
       expect(mail.subject).to match(/confirma|confirmation/i)
+    end
+
+    it "isolates a delivery failure from the signup — no rollback, no blocked user, no raw error" do
+      # The signup commits and returns BEFORE the deferred mail job runs, so the
+      # request is clean regardless of the provider.
+      expect do
+        post "/api/v1/auth/signup", params: valid_params, headers: headers
+      end.to change(User, :count).by(1)
+
+      expect(response).to have_http_status(:created)
+      expect(response.body).not_to include("Resend")
+      user = User.find_by!(email: "alice@example.com")
+
+      # Now the queued job fails at delivery time (as Resend would on an
+      # unverified domain). The already-persisted signup is untouched.
+      allow(Devise::Mailer).to receive(:confirmation_instructions)
+        .and_raise(StandardError, "Resend: domain not verified")
+      expect { perform_enqueued_jobs }.to raise_error(/Resend/)
+      expect(User.exists?(user.id)).to be(true)
     end
 
     it "does not create a session (the user must confirm their email first)" do

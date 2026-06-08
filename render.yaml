@@ -42,3 +42,7 @@ services:
       # injects its own *.onrender.com hostname in RENDER_EXTERNAL_HOSTNAME.
       - key: APP_CUSTOM_HOST
         sync: false
+      # Mailer sender — must be an address on a Resend-verified domain
+      # (e.g. "Penca Mundial <no-reply@magicpenca.app>").
+      - key: MAILER_FROM
+        sync: false
