@@ -5,6 +5,8 @@ require "rails_helper"
 # rubocop:disable RSpec/DescribeClass
 RSpec.describe "Api::V1::Auth::PasswordsController", type: :request do
   # rubocop:enable RSpec/DescribeClass
+  include ActiveJob::TestHelper
+
   let(:headers) { { "User-Agent" => "rspec" } }
 
   def user_with_token(reset_password_sent_at: Time.current, email: "alice@example.com")
@@ -20,7 +22,9 @@ RSpec.describe "Api::V1::Auth::PasswordsController", type: :request do
       user = create(:user, email: "alice@example.com")
       ActionMailer::Base.deliveries.clear
 
-      post "/api/v1/auth/password", params: { email: user.email }, headers: headers
+      perform_enqueued_jobs do
+        post "/api/v1/auth/password", params: { email: user.email }, headers: headers
+      end
 
       expect(response).to have_http_status(:accepted)
       expect(ActionMailer::Base.deliveries.last.to).to eq([ user.email ])

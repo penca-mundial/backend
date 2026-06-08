@@ -57,6 +57,17 @@ class User < ApplicationRecord
     super && !banned? && !system?
   end
 
+  # Send every Devise email (confirmation, password reset) through Solid Queue
+  # instead of inline. Devise's AR confirmable already fires this in an
+  # after_commit callback (outside the create transaction), so deliver_later
+  # only ENQUEUES a job here — the provider (Resend) is never called on the
+  # request path. A provider outage therefore can't roll back the signup, can't
+  # leave the user blocked, and can't surface a raw error to the form; the job
+  # retries on its own. Overrides the gem default, which uses deliver_now.
+  def send_devise_notification(notification, *args)
+    devise_mailer.send(notification, self, *args).deliver_later
+  end
+
   protected
 
   # OAuth-provisioned users authenticate through the provider and never set a
