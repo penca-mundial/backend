@@ -10,6 +10,7 @@ module Api
     class RankingsController < BaseController
       MAX_LIMIT = 100
       WINDOWS = %w[total today week].freeze
+      EVOLUTION_CACHE_TTL = 30.seconds
 
       # GET /api/v1/rankings/global — every user; no membership gate.
       def global
@@ -24,7 +25,30 @@ module Api
         render_leaderboard(current_tournament, group: group)
       end
 
+      # GET /api/v1/rankings/groups/:id/evolution — the per-penca multi-line
+      # points/rank evolution chart (SCRUM-286). Authenticated + member-gated,
+      # like #group. The line-set depends on current_user, so the short-TTL cache
+      # key includes it.
+      def group_evolution
+        group = Group.find(params[:id])
+        return render_forbidden unless member?(group)
+
+        tournament = current_tournament
+        body = Rails.cache.fetch(evolution_cache_key(group, tournament), expires_in: EVOLUTION_CACHE_TTL) do
+          result = GroupEvolutionQuery.call(group: group, tournament: tournament, user: current_user)
+          {
+            available: result.available,
+            lines:     GroupEvolutionLineBlueprint.render_as_hash(result.lines)
+          }.to_json
+        end
+        render body: body, content_type: "application/json"
+      end
+
       private
+
+      def evolution_cache_key(group, tournament)
+        "rankings:evolution:#{tournament.id}:#{group.id}:#{current_user.id}"
+      end
 
       # Shared render path for both variants: one page of the ranked entries
       # (page/has_more let the SPA build "Ver más") plus the optional "me"
