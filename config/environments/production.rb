@@ -88,9 +88,12 @@ Rails.application.configure do
   #   authentication: :plain
   # }
 
-  # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
-  # the I18n.default_locale when a translation cannot be found).
-  config.i18n.fallbacks = true
+  # Enable locale fallbacks for I18n. `true` would fall back to the DEFAULT
+  # locale — which here is :es itself, so a key missing in es never reached the
+  # :en texts and rendered the raw "Translation missing…" string (seen on the
+  # pwned-password signup error). Fall back to :en explicitly, matching
+  # config/application.rb.
+  config.i18n.fallbacks = [ :en ]
 
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false

@@ -49,7 +49,7 @@ RSpec.describe Auth::ResetPassword do
 
       expect(result).to be_failure
       expect(result.data).to include(code: "validation_error", status: :unprocessable_content)
-      expect(result.errors.join).to match(/[Pp]assword/)
+      expect(result.errors.join).to include("Contraseña")
     end
   end
 end

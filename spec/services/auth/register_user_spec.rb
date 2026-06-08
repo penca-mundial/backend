@@ -44,7 +44,7 @@ RSpec.describe Auth::RegisterUser do
       result = described_class.call(**params.merge(password: "SupersecretNoDigit"))
 
       expect(result).to be_failure
-      expect(result.errors.join).to match(/[Pp]assword/)
+      expect(result.errors.join).to include("Contraseña")
     end
   end
 end
