@@ -100,6 +100,10 @@ Rails.application.routes.draw do
       # Public players index, filterable by ?team_id= / ?tournament_id=
       # (defaults to current tournament). Paginated.
       get "players", to: "players#index"
+
+      # Public scoring configuration (rule points + phase multipliers), read
+      # from the admin-editable models so the rules page never hardcodes them.
+      get "scoring_rules", to: "scoring_rules#index"
     end
   end
 end

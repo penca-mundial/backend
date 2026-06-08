@@ -1,5 +1,25 @@
 # Spanish translations — the default locale. User-facing strings live here.
 es:
+  # Human labels for the public scoring config endpoint (GET /scoring_rules).
+  scoring:
+    rule_types:
+      exact_score: "Resultado exacto"
+      correct_goal_difference: "Diferencia de gol acertada"
+      correct_winner: "Resultado acertado (ganador o empate)"
+      correct_advance: "Equipo que avanza acertado"
+      champion_correct: "Campeón acertado"
+      runner_up_correct: "Subcampeón acertado"
+      third_place_correct: "Tercer puesto acertado"
+      fourth_place_correct: "Cuarto puesto acertado"
+      top_scorer_correct: "Goleador acertado"
+    phases:
+      group_stage: "Fase de grupos"
+      round_of_32: "Dieciseisavos de final"
+      round_of_16: "Octavos de final"
+      quarter_final: "Cuartos de final"
+      semi_final: "Semifinal"
+      third_place: "Tercer puesto"
+      final: "Final"
   errors:
     not_found: "Recurso no encontrado."
     standard_error: "Ocurrió un error inesperado."

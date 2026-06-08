@@ -1,6 +1,26 @@
 # English translations. User-facing strings default to Spanish (see es.yml);
 # English is the fallback locale.
 en:
+  # Human labels for the public scoring config endpoint (GET /scoring_rules).
+  scoring:
+    rule_types:
+      exact_score: "Exact score"
+      correct_goal_difference: "Correct goal difference"
+      correct_winner: "Correct result (winner or draw)"
+      correct_advance: "Correct team to advance"
+      champion_correct: "Correct champion"
+      runner_up_correct: "Correct runner-up"
+      third_place_correct: "Correct third place"
+      fourth_place_correct: "Correct fourth place"
+      top_scorer_correct: "Correct top scorer"
+    phases:
+      group_stage: "Group stage"
+      round_of_32: "Round of 32"
+      round_of_16: "Round of 16"
+      quarter_final: "Quarter-final"
+      semi_final: "Semi-final"
+      third_place: "Third place"
+      final: "Final"
   errors:
     not_found: "Resource not found."
     standard_error: "Something went wrong."
