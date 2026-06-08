@@ -43,6 +43,12 @@ en:
       cannot_kick_owner: "The group owner cannot be removed."
       not_a_member: "That user is not a member of the group."
   activerecord:
+    # Attribute names mirrored from es.yml so the English fallback reads cleanly.
+    attributes:
+      user:
+        email: "Email"
+        username: "Username"
+        password: "Password"
     errors:
       models:
         user:

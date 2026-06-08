@@ -75,25 +75,38 @@ RSpec.describe "POST /api/v1/auth/signup", type: :request do # rubocop:disable R
   end
 
   describe "with a duplicate email" do
-    it "returns 422 with a validation error" do
+    it "returns 422 with the Spanish taken message" do
       create(:user, email: "alice@example.com")
 
       post "/api/v1/auth/signup", params: valid_params, headers: headers
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body.dig("error", "code")).to eq("validation_error")
-      expect(response.parsed_body.dig("error", "details", "errors").join).to match(/[Ee]mail/)
+      expect(response.parsed_body.dig("error", "details", "errors")).to include("Email ya está en uso")
     end
   end
 
   describe "with a duplicate username" do
-    it "returns 422 with a validation error" do
+    it "returns 422 with the Spanish taken message" do
       create(:user, username: "alice_99")
 
       post "/api/v1/auth/signup", params: valid_params, headers: headers
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.parsed_body.dig("error", "details", "errors").join).to match(/[Uu]sername/)
+      expect(response.parsed_body.dig("error", "details", "errors")).to include("Nombre de usuario ya está en uso")
+    end
+  end
+
+  describe "with a too-short password" do
+    it "returns 422 with the Spanish length message in Spanish (no English fallback)" do
+      post "/api/v1/auth/signup",
+           params: valid_params.merge(password: "Ab3"),
+           headers: headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+      errors = response.parsed_body.dig("error", "details", "errors")
+      expect(errors.join).to include("Contraseña es demasiado corto")
+      expect(errors.join).not_to match(/is too short|can't be blank|has already/)
     end
   end
 

@@ -62,7 +62,7 @@ RSpec.describe Service do
       result = service.call
 
       expect(result).to be_failure
-      expect(result.errors).to include("Email can't be blank")
+      expect(result.errors).to include("Email no puede estar en blanco")
     end
 
     it "rescues ActiveRecord::RecordNotFound and returns an i18n message" do

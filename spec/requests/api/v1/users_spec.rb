@@ -56,7 +56,7 @@ RSpec.describe "Api::V1::UsersController", type: :request do
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(response.parsed_body.dig("error", "code")).to eq("validation_error")
-        expect(response.parsed_body.dig("error", "details", "errors").join).to match(/[Uu]sername/)
+        expect(response.parsed_body.dig("error", "details", "errors").join).to match(/Nombre de usuario/)
       end
 
       it "rejects an invalid username with 422" do
@@ -143,7 +143,7 @@ RSpec.describe "Api::V1::UsersController", type: :request do
              params: { username: "Taken_Name" }, headers: headers
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(response.parsed_body.dig("error", "details", "errors").join).to match(/[Uu]sername/)
+        expect(response.parsed_body.dig("error", "details", "errors").join).to match(/Nombre de usuario/)
       end
     end
 

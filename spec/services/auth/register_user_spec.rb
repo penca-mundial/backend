@@ -37,7 +37,7 @@ RSpec.describe Auth::RegisterUser do
       result = described_class.call(**params.merge(username: "Bad Name"))
 
       expect(result).to be_failure
-      expect(result.errors.join).to match(/[Uu]sername/)
+      expect(result.errors.join).to match(/Nombre de usuario/)
     end
 
     it "fails when the password has no digit" do
