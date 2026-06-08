@@ -106,6 +106,17 @@ Rails.application.configure do
   if ENV["RENDER_EXTERNAL_HOSTNAME"].present?
     config.hosts << ENV["RENDER_EXTERNAL_HOSTNAME"]
 
+    # The custom domain(s) real traffic arrives through do NOT come in
+    # RENDER_EXTERNAL_HOSTNAME — Render injects only its own *.onrender.com
+    # hostname while preserving the original Host header. With authorization
+    # active, a custom domain missing from this list would get 403 "Blocked
+    # host" on ALL real traffic while the health check (excluded below) stayed
+    # green — a silent outage. APP_CUSTOM_HOST is comma-separated to allow
+    # more than one host.
+    ENV.fetch("APP_CUSTOM_HOST", "").split(",").map(&:strip).reject(&:blank?).each do |host|
+      config.hosts << host
+    end
+
     # Skip DNS rebinding protection for the health check endpoints.
     config.host_authorization = { exclude: health_check }
   end
