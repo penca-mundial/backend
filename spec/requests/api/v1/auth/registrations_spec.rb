@@ -98,13 +98,14 @@ RSpec.describe "POST /api/v1/auth/signup", type: :request do # rubocop:disable R
   end
 
   describe "with a password missing a digit" do
-    it "returns 422 with a validation error" do
+    it "returns 422 with the Spanish attribute and message" do
       post "/api/v1/auth/signup",
            params: valid_params.merge(password: "SupersecretNoDigit"),
            headers: headers
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.parsed_body.dig("error", "details", "errors").join).to match(/[Pp]assword/)
+      expect(response.parsed_body.dig("error", "details", "errors"))
+        .to include("Contraseña debe contener al menos un número")
     end
   end
 
@@ -119,11 +120,14 @@ RSpec.describe "POST /api/v1/auth/signup", type: :request do # rubocop:disable R
         .to_return(status: 200, body: "#{suffix}:42\r\n")
     end
 
-    it "returns 422 with a validation error" do
+    it "returns 422 with the Spanish pwned message (no raw i18n fallback)" do
       post "/api/v1/auth/signup", params: valid_params, headers: headers
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.parsed_body.dig("error", "details", "errors").join).to match(/[Pp]assword/)
+      expect(response.parsed_body.dig("error", "details", "errors")).to include(
+        "Contraseña apareció en filtraciones de datos conocidas. Elegí una contraseña distinta."
+      )
+      expect(response.parsed_body.dig("error", "details", "errors").join).not_to include("Translation missing")
     end
   end
 end

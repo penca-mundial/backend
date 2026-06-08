@@ -29,6 +29,7 @@ en:
           attributes:
             password:
               missing_digit: "must contain at least one number"
+              pwned_password: "has appeared in known data breaches. Please choose a different password."
         match:
           attributes:
             advancing_team_id:
