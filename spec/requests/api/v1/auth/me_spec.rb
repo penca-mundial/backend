@@ -24,6 +24,16 @@ RSpec.describe "GET /api/v1/auth/me", type: :request do
       )
     end
 
+    it "exposes provider (null for a password user) and an ISO8601 created_at for the Profile page" do
+      get "/api/v1/auth/me", headers: headers
+
+      payload = response.parsed_body["user"]
+      expect(payload).to have_key("provider")
+      expect(payload["provider"]).to be_nil
+      expect(payload["created_at"]).to match(/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
+      expect(Time.iso8601(payload["created_at"])).to be_within(5.seconds).of(user.created_at)
+    end
+
     it "exposes needs_username: false when the user has a username" do
       get "/api/v1/auth/me", headers: headers
 
@@ -56,6 +66,12 @@ RSpec.describe "GET /api/v1/auth/me", type: :request do
         "username"       => nil,
         "needs_username" => true
       )
+    end
+
+    it "exposes provider: google_oauth2 for a Google user" do
+      get "/api/v1/auth/me", headers: headers
+
+      expect(response.parsed_body["user"]["provider"]).to eq("google_oauth2")
     end
   end
 
