@@ -49,6 +49,7 @@ en:
         email: "Email"
         username: "Username"
         password: "Password"
+        avatar_url: "Avatar"
     errors:
       models:
         user:
@@ -56,6 +57,8 @@ en:
             password:
               missing_digit: "must contain at least one number"
               pwned_password: "has appeared in known data breaches. Please choose a different password."
+            avatar_url:
+              insecure_url: "must be a valid https URL"
         match:
           attributes:
             advancing_team_id:

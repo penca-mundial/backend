@@ -51,6 +51,7 @@ es:
         email: "Email"
         username: "Nombre de usuario"
         password: "Contraseña"
+        avatar_url: "Avatar"
     errors:
       models:
         user:
@@ -61,6 +62,8 @@ es:
               # key production (es) rendered the raw "Translation missing…"
               # fallback. Reads after the attribute: "Contraseña apareció en…".
               pwned_password: "apareció en filtraciones de datos conocidas. Elegí una contraseña distinta."
+            avatar_url:
+              insecure_url: "debe ser una URL https válida"
         match:
           attributes:
             advancing_team_id:
