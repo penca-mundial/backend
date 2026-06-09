@@ -69,6 +69,17 @@ RSpec.describe "Api::V1::RankingsController", type: :request do
         expect(response.parsed_body["me"]).to be_nil
       end
 
+      it "includes total = number of ranked players (every non-system user), excluding the system account" do
+        add_scores(user, points: 10)       # the logged-in user
+        add_scores(create(:user), points: 5) # one rival
+        # The system service account exists but must NOT be counted.
+        create(:user, :system, email: "system@penca.local")
+
+        get "/api/v1/rankings/global", headers: headers
+
+        expect(response.parsed_body["total"]).to eq(2)
+      end
+
       it "serves stable 25-row pages with page/has_more, and me rides along unpaginated" do
         add_scores(user, points: 99) # the leader — and the "me" row
         26.times { create(:user) }   # zero-point tail -> 27 users total

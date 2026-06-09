@@ -7,5 +7,9 @@
 class UserBlueprint < Blueprinter::Base
   identifier :id
 
-  fields :email, :username, :admin, :avatar_url, :timezone, :confirmed_at
+  # provider: "google_oauth2" for Google users, null for password users — lets
+  # the SPA render the right "Cuenta" section per auth method.
+  # created_at: account creation time ("Miembro desde", serialized ISO8601 like
+  # the existing confirmed_at).
+  fields :email, :username, :admin, :avatar_url, :timezone, :confirmed_at, :provider, :created_at
 end

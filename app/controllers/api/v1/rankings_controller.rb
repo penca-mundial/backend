@@ -67,8 +67,17 @@ module Api
           entries:  RankingEntryBlueprint.render_as_hash(result.entries),
           me:       me && RankingEntryBlueprint.render_as_hash(me),
           page:     page_number,
-          has_more: result.has_more
+          has_more: result.has_more,
+          total:    ranked_total(group)
         }
+      end
+
+      # Number of ranked players, for the SPA's "de N" next to the position. One
+      # cheap COUNT (no per-row work, no N+1) over the SAME universe the
+      # leaderboard ranks: every non-system user globally, or the group's
+      # members. Window-independent — the universe doesn't change with the window.
+      def ranked_total(group)
+        group ? group.memberships.count : User.where(system: false).count
       end
 
       # The leaderboard is scoped to the current tournament; pencas are
