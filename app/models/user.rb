@@ -33,6 +33,9 @@ class User < ApplicationRecord
   validates :username,
             username_format: true,
             uniqueness: { case_sensitive: false, allow_blank: true }
+  # Custom and Google avatars are both https; reject anything else (or malformed).
+  # Optional — blank is fine (the user may have no avatar).
+  validates :avatar_url, https_url: true, allow_blank: true
   validate :password_contains_digit
 
   before_validation :normalize_username

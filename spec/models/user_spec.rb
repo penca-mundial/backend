@@ -72,6 +72,27 @@ RSpec.describe User, type: :model do
     it "accepts a password containing a digit" do
       expect(build(:user, password: "Sup3rSecret")).to be_valid
     end
+
+    describe "avatar_url" do
+      it "is valid when blank (nil)" do
+        expect(build(:user, avatar_url: nil)).to be_valid
+      end
+
+      it "accepts a well-formed https URL" do
+        expect(build(:user, avatar_url: "https://lh3.googleusercontent.com/a/photo.jpg")).to be_valid
+      end
+
+      it "rejects a non-https (http) URL" do
+        user = build(:user, avatar_url: "http://cdn.example.com/a.png")
+
+        expect(user).not_to be_valid
+        expect(user.errors[:avatar_url]).to be_present
+      end
+
+      it "rejects a malformed URL" do
+        expect(build(:user, avatar_url: "not a url")).not_to be_valid
+      end
+    end
   end
 
   describe "#normalize_username" do

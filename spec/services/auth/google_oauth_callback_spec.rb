@@ -39,6 +39,17 @@ RSpec.describe Auth::GoogleOauthCallback do
       expect(second.data).to eq(first)
     end
 
+    it "does not overwrite a custom avatar_url on a subsequent login (same principle as ADR 0002)" do
+      user = described_class.call(auth_hash: auth_hash).data
+      user.update!(avatar_url: "https://cdn.example.com/custom-avatar.png")
+
+      # The user logs in again and Google now sends a different photo.
+      result = described_class.call(auth_hash: auth_hash(image: "https://img/new-google-photo.png"))
+
+      expect(result).to be_success
+      expect(result.data.reload.avatar_url).to eq("https://cdn.example.com/custom-avatar.png")
+    end
+
     it "rejects with use_password when the email already belongs to a password user" do
       create(:user, email: "alice@example.com", provider: nil)
 
