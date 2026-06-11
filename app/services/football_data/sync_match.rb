@@ -14,12 +14,15 @@ module FootballData
   #
   # The update runs inside with_lock so concurrent polls can't interleave.
   class SyncMatch < Service
-    # Live scores change constantly, so we bypass the client's 5-minute default
-    # cache. A tiny non-zero TTL (rather than 0) still serves the SAME match
-    # from cache if two polls overlap within the window — a cheap guard against
-    # bursting the 10 req/min limit — while staying effectively fresh for the
-    # 60s polling cadence.
-    LIVE_CACHE_TTL = 10.seconds
+    # Live scores change every minute, so the poll must read straight from the
+    # network — never the client's response cache. We pass cache_ttl: 0, the
+    # client's documented true bypass. A non-zero TTL would NOT keep us fresh:
+    # Rails.cache.fetch only honors expires_in when it WRITES on a miss, so on a
+    # hit it returns whatever is cached (and never shortens it), which can revert
+    # a live match to a stale scheduled 0-0 — the live-sync incident. With a
+    # single 60s poll there is nothing to de-duplicate, and the handful of
+    # concurrent matches in a tournament stays well under the 10 req/min limit.
+    LIVE_CACHE_TTL = 0.seconds
 
     def initialize(match:, client: Client.new)
       @match = match
@@ -49,8 +52,24 @@ module FootballData
 
     private
 
+    # Map the feed status, but never let a stale or lagging "scheduled" payload
+    # revert a match the feed has already advanced to live/finished — the
+    # live-sync incident, where a scheduled 0-0 read clobbered a live 1-0. Every
+    # other transition (postponed, cancelled, finished, live<->finished) is
+    # legitimate and applies; a finished match wrongly flipped to scheduled by a
+    # bad read is the one we refuse.
+    def guarded_status(data)
+      mapped = SyncFixtures::STATUS_MAP.fetch(data["status"], @match.status)
+      if mapped == "scheduled" && (@match.status_live? || @match.status_finished?)
+        log_warn("Ignoring scheduled payload for #{@match.status} match #{@match.external_id}")
+        return @match.status
+      end
+
+      mapped
+    end
+
     def apply(data)
-      @match.status = SyncFixtures::STATUS_MAP.fetch(data["status"], @match.status)
+      @match.status = guarded_status(data)
 
       # Users predict the 90-minute result; ET/penalties only decide who
       # advances. regularTime carries the post-90' score for ET/penalty matches;

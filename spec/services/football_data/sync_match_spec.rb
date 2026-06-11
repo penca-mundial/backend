@@ -164,12 +164,53 @@ RSpec.describe FootballData::SyncMatch do
     let(:match)  { create(:match, external_id: "m-9", status: "scheduled", kickoff_at: 1.hour.from_now) }
     let(:client) { instance_double(FootballData::Client) }
 
-    it "fetches the match with a short live cache_ttl so scores stay fresh" do
+    it "fetches the match read-through (cache_ttl: 0) so the live poll always hits the network" do
       allow(client).to receive(:match).and_return("status" => "IN_PLAY")
 
       described_class.call(match: match, client: client)
 
-      expect(client).to have_received(:match).with("m-9", cache_ttl: described_class::LIVE_CACHE_TTL)
+      expect(described_class::LIVE_CACHE_TTL).to eq(0)
+      expect(client).to have_received(:match).with("m-9", cache_ttl: 0)
+    end
+  end
+
+  describe "status regression guard" do
+    it "keeps a live match live (and its score) when a stale scheduled payload arrives" do
+      match = create(:match, external_id: "reg-1", status: "live", kickoff_at: 1.hour.ago,
+                             home_score: 1, away_score: 0)
+      stub_match("reg-1", "status" => "SCHEDULED")
+
+      described_class.call(match: match)
+
+      expect(match.reload).to have_attributes(status: "live", home_score: 1, away_score: 0)
+    end
+
+    it "keeps a finished match finished when a stale scheduled payload arrives" do
+      match = create(:match, external_id: "reg-2", status: "finished", kickoff_at: 3.hours.ago,
+                             home_score: 2, away_score: 1)
+      stub_match("reg-2", "status" => "SCHEDULED")
+
+      described_class.call(match: match)
+
+      expect(match.reload).to have_attributes(status: "finished", home_score: 2, away_score: 1)
+    end
+
+    it "still applies a postponed payload over a live match (not a scheduled regression)" do
+      match = create(:match, external_id: "reg-3", status: "live", kickoff_at: 1.hour.ago)
+      stub_match("reg-3", "status" => "POSTPONED")
+
+      described_class.call(match: match)
+
+      expect(match.reload).to be_status_postponed
+    end
+
+    it "still applies a cancelled payload over a live match" do
+      match = create(:match, external_id: "reg-4", status: "live", kickoff_at: 1.hour.ago)
+      stub_match("reg-4", "status" => "CANCELLED")
+
+      described_class.call(match: match)
+
+      expect(match.reload).to be_status_cancelled
     end
   end
 
