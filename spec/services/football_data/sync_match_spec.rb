@@ -214,6 +214,44 @@ RSpec.describe FootballData::SyncMatch do
     end
   end
 
+  describe "knockout in-play statuses" do
+    %w[EXTRA_TIME PENALTY_SHOOTOUT].each do |feed_status|
+      it "maps #{feed_status} to live over a scheduled match" do
+        match = create(:match, :round_of_16, external_id: "ko-#{feed_status}", status: "scheduled",
+                               kickoff_at: 1.hour.ago)
+        stub_match("ko-#{feed_status}", "status" => feed_status)
+
+        described_class.call(match: match)
+
+        expect(match.reload).to be_status_live
+      end
+
+      it "keeps a live match live on #{feed_status}" do
+        match = create(:match, :round_of_16, external_id: "kol-#{feed_status}", status: "live",
+                               kickoff_at: 1.hour.ago)
+        stub_match("kol-#{feed_status}", "status" => feed_status)
+
+        described_class.call(match: match)
+
+        expect(match.reload).to be_status_live
+      end
+    end
+  end
+
+  describe "unmapped status" do
+    it "keeps the current status and warns with the raw value" do
+      match = create(:match, external_id: "unk-1", status: "live", kickoff_at: 1.hour.ago)
+      stub_match("unk-1", "status" => "SOMETHING_NEW")
+      service = described_class.new(match: match)
+      allow(service).to receive(:log_warn)
+
+      service.call
+
+      expect(match.reload).to be_status_live
+      expect(service).to have_received(:log_warn).with(a_string_matching(/SOMETHING_NEW/))
+    end
+  end
+
   describe "knockout result and advancing team" do
     it "stores the 90' result (regularTime), not the ET/penalty fullTime, with the advancing team" do
       match = create(:match, :round_of_16, external_id: "ko-1", status: "live", kickoff_at: 1.hour.ago)

@@ -57,9 +57,17 @@ module FootballData
     # live-sync incident, where a scheduled 0-0 read clobbered a live 1-0. Every
     # other transition (postponed, cancelled, finished, live<->finished) is
     # legitimate and applies; a finished match wrongly flipped to scheduled by a
-    # bad read is the one we refuse.
+    # bad read is the one we refuse. An unmapped status keeps the current one too,
+    # but never silently — we warn with the raw value so a new feed status (e.g. a
+    # knockout phase we don't map yet) surfaces instead of freezing a match.
     def guarded_status(data)
-      mapped = SyncFixtures::STATUS_MAP.fetch(data["status"], @match.status)
+      raw = data["status"]
+      unless SyncFixtures::STATUS_MAP.key?(raw)
+        log_warn("Unmapped feed status #{raw.inspect} for match #{@match.external_id}; keeping #{@match.status}")
+        return @match.status
+      end
+
+      mapped = SyncFixtures::STATUS_MAP.fetch(raw)
       if mapped == "scheduled" && (@match.status_live? || @match.status_finished?)
         log_warn("Ignoring scheduled payload for #{@match.status} match #{@match.external_id}")
         return @match.status

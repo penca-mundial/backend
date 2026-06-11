@@ -13,6 +13,7 @@ module FootballData
     STATUS_MAP = {
       "SCHEDULED" => "scheduled", "TIMED" => "scheduled",
       "IN_PLAY" => "live", "PAUSED" => "live",
+      "EXTRA_TIME" => "live", "PENALTY_SHOOTOUT" => "live",
       "FINISHED" => "finished", "AWARDED" => "finished",
       "POSTPONED" => "postponed",
       "SUSPENDED" => "cancelled", "CANCELLED" => "cancelled"
