@@ -185,6 +185,32 @@ RSpec.describe "Api::V1::MatchesController", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to be_nil
     end
+
+    context "when authenticated" do
+      before { login_as(user, scope: :user) }
+
+      it "embeds my_prediction for the next match" do
+        upcoming = create(:match, kickoff_at: 2.hours.from_now)
+        create(:prediction, user: user, match: upcoming, predicted_home_score: 2, predicted_away_score: 1)
+
+        get "/api/v1/matches/next", headers: headers
+
+        expect(response).to have_http_status(:ok)
+        expect(response.parsed_body["id"]).to eq(upcoming.id)
+        expect(response.parsed_body["my_prediction"]).to include(
+          "predicted_home_score" => 2, "predicted_away_score" => 1
+        )
+      end
+
+      it "nulls my_prediction when the user has no prediction for it" do
+        create(:match, kickoff_at: 2.hours.from_now)
+
+        get "/api/v1/matches/next", headers: headers
+
+        expect(response.parsed_body).to have_key("my_prediction")
+        expect(response.parsed_body["my_prediction"]).to be_nil
+      end
+    end
   end
 
   describe "GET /api/v1/matches/recent_finished" do
