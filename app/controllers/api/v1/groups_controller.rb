@@ -12,7 +12,10 @@ module Api
       def index
         groups = current_user.groups.includes(:owner).order(is_general_pool: :desc, created_at: :desc).to_a
         render json: GroupBlueprint.render(
-          groups, current_user: current_user, member_counts: member_counts_for(groups)
+          groups,
+          current_user:  current_user,
+          member_counts: member_counts_for(groups),
+          my_ranks:      ranks_for(groups)
         ), content_type: "application/json"
       end
 
@@ -120,6 +123,13 @@ module Api
 
       def member_counts_for(groups)
         GroupMembership.where(group_id: groups.map(&:id)).group(:group_id).count
+      end
+
+      # {group_id => rank} for the current user, reusing the rankings query. The
+      # leaderboard is tournament-scoped (pencas are not), so it resolves the
+      # current tournament here; nil when none exists -> an empty hash (no rank).
+      def ranks_for(groups)
+        GroupRanksQuery.call(user: current_user, tournament: CurrentTournamentQuery.call, groups: groups)
       end
     end
   end

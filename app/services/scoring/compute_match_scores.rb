@@ -19,7 +19,6 @@ module Scoring
   class ComputeMatchScores < Service
     def initialize(match:)
       @match = match
-      @points_cache = {}
     end
 
     def call
@@ -63,32 +62,16 @@ module Scoring
       score.save!
     end
 
+    # The rule->points->multiplier mapping lives in MatchScoreCalculator (shared
+    # with the live-match projection); here we only stamp the persistence-only
+    # computed_at. The calculator memoizes the rule/multiplier lookups across the
+    # run, so per-row save! query-cache clears don't cause repeat lookups.
     def score_attributes(prediction)
-      eval_data = invoke { MatchRuleEvaluator.call(prediction: prediction, match: @match) }
-      result_rule = eval_data[:result_rule]
-      advance_rule = eval_data[:advance_rule]
-
-      {
-        points_result:  points_for(result_rule),
-        points_advance: advance_rule ? points_for(advance_rule) : 0,
-        multiplier:     multiplier,
-        breakdown:      { result_rule:, advance_rule:, multiplier_phase: @match.phase },
-        computed_at:    Time.current
-      }
+      calculator.attributes_for(prediction).merge(computed_at: Time.current)
     end
 
-    # Constant across the run; memoized so per-row save! query-cache clears don't
-    # cause repeat lookups.
-    def multiplier
-      @multiplier ||= PhaseMultiplier.for(@match.phase) || 1.0
-    end
-
-    # Data-driven, memoized per rule. Sentinels (:no_match / :no_advance / nil)
-    # have no ScoringRule row → 0. key? guards so a memoized 0 isn't re-queried.
-    def points_for(rule)
-      return @points_cache[rule] if @points_cache.key?(rule)
-
-      @points_cache[rule] = ScoringRule.for(rule) || 0
+    def calculator
+      @calculator ||= MatchScoreCalculator.new(match: @match)
     end
   end
 end
