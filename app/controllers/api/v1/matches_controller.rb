@@ -22,6 +22,11 @@ module Api
 
       def live
         matches = Match.status_live.includes(:home_team, :away_team).order(:kickoff_at)
+        # Signed-in users get a per-user payload (prediction + live projected
+        # points), so it can't share the public cache; everyone else gets the
+        # cached, user-agnostic fixture.
+        return render json: live_scoreboard(matches) if current_user
+
         render body: cached("matches:live") { MatchBlueprint.render(matches) }, content_type: "application/json"
       end
 
@@ -68,6 +73,10 @@ module Api
       def my_prediction_hash(match)
         prediction = current_user.predictions.find_by(match_id: match.id)
         prediction && PredictionBlueprint.render_as_hash(prediction)
+      end
+
+      def live_scoreboard(matches)
+        Matches::LiveScoreboard.call(matches: matches, user: current_user).data[:entries]
       end
     end
   end

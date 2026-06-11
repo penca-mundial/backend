@@ -90,6 +90,55 @@ RSpec.describe "Api::V1::MatchesController", type: :request do
       ids = response.parsed_body.map { |m| m["id"] }
       expect(ids).to eq([ live.id ])
     end
+
+    context "when authenticated" do
+      before do
+        create(:scoring_rule, rule_type: "exact_score", points: 5)
+        login_as(user, scope: :user)
+      end
+
+      it "embeds my_prediction and projected_points at the current live score" do
+        live = create(:match, :live, kickoff_at: 1.hour.ago, home_score: 2, away_score: 1)
+        create(:prediction, user: user, match: live, predicted_home_score: 2, predicted_away_score: 1)
+
+        get "/api/v1/matches/live", headers: headers
+
+        expect(response).to have_http_status(:ok)
+        row = response.parsed_body.first
+        expect(row["my_prediction"]).to include("predicted_home_score" => 2, "predicted_away_score" => 1)
+        expect(row["projected_points"]).to eq(5) # exact match of the live score
+      end
+
+      it "nulls my_prediction and projected_points without a prediction" do
+        create(:match, :live, kickoff_at: 1.hour.ago, home_score: 0, away_score: 0)
+
+        get "/api/v1/matches/live", headers: headers
+
+        row = response.parsed_body.first
+        expect(row).to have_key("my_prediction")
+        expect(row["my_prediction"]).to be_nil
+        expect(row["projected_points"]).to be_nil
+      end
+
+      it "does not issue an N+1 across live matches" do
+        3.times do |i|
+          m = create(:match, :live, kickoff_at: (i + 1).hours.ago, home_score: 1, away_score: 0)
+          create(:prediction, user: user, match: m, predicted_home_score: 1, predicted_away_score: 0)
+        end
+
+        query_count = 0
+        counter = lambda do |_n, _s, _f, _id, payload|
+          query_count += 1 unless %w[SCHEMA TRANSACTION].include?(payload[:name])
+        end
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+          get "/api/v1/matches/live", headers: headers
+        end
+
+        # Predictions + scores batch-loaded, scoring config memoized across
+        # matches: bounded and independent of the live-match count.
+        expect(query_count).to be <= 10
+      end
+    end
   end
 
   describe "GET /api/v1/matches/today" do
