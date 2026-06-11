@@ -8,6 +8,8 @@ module Api
     class MatchesController < BaseController
       skip_before_action :require_user!
 
+      RECENT_FINISHED_LIMIT = 3
+
       def index
         matches = MatchesQuery.call(filters: filter_params).includes(:home_team, :away_team)
         render_paginated(matches, MatchBlueprint)
@@ -22,10 +24,10 @@ module Api
 
       def live
         matches = Match.status_live.includes(:home_team, :away_team).order(:kickoff_at)
-        # Signed-in users get a per-user payload (prediction + live projected
-        # points), so it can't share the public cache; everyone else gets the
-        # cached, user-agnostic fixture.
-        return render json: live_scoreboard(matches) if current_user
+        # Signed-in users get a per-user payload (prediction + live points), so it
+        # can't share the public cache; everyone else gets the cached, user-
+        # agnostic fixture.
+        return render json: user_scoreboard(matches) if current_user
 
         render body: cached("matches:live") { MatchBlueprint.render(matches) }, content_type: "application/json"
       end
@@ -45,13 +47,16 @@ module Api
         render json: match && MatchBlueprint.render_as_hash(match)
       end
 
-      # The most recently kicked-off finished match (with its scores). Embeds the
-      # signed-in user's prediction for it, like #show; null when none is finished.
-      def last_finished
-        match = Match.status_finished.includes(:home_team, :away_team).order(kickoff_at: :desc).first
-        payload = match && MatchBlueprint.render_as_hash(match)
-        payload = payload.merge(my_prediction: my_prediction_hash(match)) if payload && current_user
-        render json: payload
+      # The current tournament's most recent finished matches (up to 3, newest
+      # first) for the Home recap. For a signed-in user each match embeds a
+      # compact my_prediction with the points it scored against the FINAL result
+      # (computed on the fly, per match); anonymous callers get the plain fixture.
+      def recent_finished
+        matches = Match.status_finished.where(tournament: current_tournament)
+                       .includes(:home_team, :away_team).order(kickoff_at: :desc).limit(RECENT_FINISHED_LIMIT)
+        return render json: user_scoreboard(matches) if current_user
+
+        render json: MatchBlueprint.render_as_hash(matches)
       end
 
       private
@@ -75,8 +80,13 @@ module Api
         prediction && PredictionBlueprint.render_as_hash(prediction)
       end
 
-      def live_scoreboard(matches)
-        Matches::LiveScoreboard.call(matches: matches, user: current_user).data[:entries]
+      def user_scoreboard(matches)
+        Matches::UserScoreboard.call(matches: matches, user: current_user).data[:entries]
+      end
+
+      # The tournament whose recap we show; nil-safe (no tournament -> no matches).
+      def current_tournament
+        @current_tournament ||= CurrentTournamentQuery.call
       end
     end
   end

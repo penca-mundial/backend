@@ -8,8 +8,8 @@ module Scoring
   #
   #   * ComputeMatchScores — persists a PredictionScore per prediction of a
   #     finished match (the real, stored scoring).
-  #   * Matches::LiveScoreboard — projects the points a prediction WOULD earn if
-  #     the live match ended at its current score (read-only, never persisted).
+  #   * Matches::UserScoreboard — the points a prediction scores against a match's
+  #     CURRENT score (live or final), computed read-only and never persisted.
   #
   # Classification is delegated to MatchRuleEvaluator (the actual rules); the
   # configured values come from ScoringRule / PhaseMultiplier; the total is

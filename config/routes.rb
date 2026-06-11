@@ -76,12 +76,13 @@ Rails.application.routes.draw do
       # swallowed by the show route.
       get "matches/live",          to: "matches#live"
       get "matches/today",         to: "matches#today"
-      # Home dashboard helpers: the single soonest scheduled / most recent
-      # finished match (the index has no order/limit, so dedicated reads).
-      get "matches/next",          to: "matches#next_match"
-      get "matches/last_finished", to: "matches#last_finished"
-      get "matches",               to: "matches#index"
-      get "matches/:id",           to: "matches#show"
+      # Home dashboard helpers: the soonest scheduled match and the current
+      # tournament's most recent finished matches (the index has no order/limit,
+      # so dedicated reads).
+      get "matches/next",            to: "matches#next_match"
+      get "matches/recent_finished", to: "matches#recent_finished"
+      get "matches",                 to: "matches#index"
+      get "matches/:id",             to: "matches#show"
 
       # Public group standings, scoped by ?tournament_id= (defaults to the first
       # tournament). Grouped by group letter, ordered by position.
