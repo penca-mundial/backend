@@ -51,7 +51,54 @@ RSpec.describe "Api::V1::GroupsController", type: :request do
           get "/api/v1/groups/me", headers: headers
         end
 
-        expect(query_count).to be <= 5 # bounded, independent of the group count
+        # member_count stays batched; the only constant add is CurrentTournamentQuery
+        # (no tournament here, so my_rank does no per-group work). Independent of count.
+        expect(query_count).to be <= 8
+      end
+    end
+
+    context "with my_rank (reuses the rankings definition)" do
+      let(:tournament) { create(:tournament) }
+
+      before { login_as(user, scope: :user) }
+
+      # Gives a group member match points in the current tournament so the
+      # leaderboard can rank them (mirrors the rankings spec helper).
+      def give_points(member, points)
+        prediction = create(:prediction, user: member, match: create(:match, tournament: tournament))
+        create(:prediction_score, prediction: prediction, points_result: points, multiplier: 1.0,
+                                  breakdown: { "result_rule" => "correct_winner" })
+      end
+
+      it "embeds the user's rank within each group" do
+        group = group_owned_by(user)
+        rival = create(:user)
+        create(:group_membership, group: group, user: rival)
+        give_points(user, 5)
+        give_points(rival, 10)
+
+        get "/api/v1/groups/me", headers: headers
+
+        row = response.parsed_body.find { |g| g["id"] == group.id }
+        expect(row["my_rank"]).to eq(2) # behind the higher-scoring rival
+      end
+
+      it "ranks the only member first" do
+        group = group_owned_by(user)
+        give_points(user, 3)
+
+        get "/api/v1/groups/me", headers: headers
+
+        row = response.parsed_body.find { |g| g["id"] == group.id }
+        expect(row["my_rank"]).to eq(1)
+      end
+
+      it "omits my_rank from the single-group endpoints (opt-in to /groups/me)" do
+        group = group_owned_by(user)
+
+        get "/api/v1/groups/#{group.id}", headers: headers
+
+        expect(response.parsed_body).not_to have_key("my_rank")
       end
     end
   end
@@ -348,9 +395,11 @@ RSpec.describe "Api::V1::GroupsController", type: :request do
       query_count = count_queries { get "/api/v1/groups/me", headers: headers }
 
       # With :owner preloaded the owners load in one query; without it this would
-      # be ~6 extra (one per distinct owner). Bounded well below the per-group count.
+      # be ~6 extra (one per distinct owner). The only constant add is
+      # CurrentTournamentQuery (no tournament here -> my_rank is query-free).
+      # Still bounded well below the per-group count (6 groups).
       expect(response.parsed_body.size).to eq(6)
-      expect(query_count).to be <= 6
+      expect(query_count).to be <= 9
     end
   end
 end

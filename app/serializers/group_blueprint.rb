@@ -27,4 +27,11 @@ class GroupBlueprint < Blueprinter::Base
     current_user = options[:current_user]
     !current_user.nil? && group.owner_id == current_user.id
   end
+
+  # The current user's rank within this group (same definition as
+  # /rankings/groups/:id), passed in as a {group_id => rank} hash. Only rendered
+  # when callers opt in (groups/me); nil when the user has no ranked row yet.
+  field :my_rank, if: ->(_field, _group, options) { options.key?(:my_ranks) } do |group, options|
+    options[:my_ranks][group.id]
+  end
 end

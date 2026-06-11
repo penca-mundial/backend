@@ -78,4 +78,15 @@ RSpec.describe Seeds::Tournament do
     expect(CurrentTournamentQuery.call).to eq(Tournament.sole)
     expect(CurrentTournamentQuery.call.external_code).to eq("WC")
   end
+
+  # Home renders a "Día N de M" progress label spanning starts_at..ends_at, so
+  # the current tournament must carry a non-null ends_at (after starts_at).
+  it "gives the current tournament a populated date span (starts_at < ends_at)" do
+    seed!
+
+    tournament = CurrentTournamentQuery.call
+    expect(tournament.starts_at).to be_present
+    expect(tournament.ends_at).to be_present
+    expect(tournament.ends_at).to be > tournament.starts_at
+  end
 end

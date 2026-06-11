@@ -6,7 +6,9 @@ module Api
     # PUT /api/v1/tournament_predictions    — create or update it (upsert).
     class TournamentPredictionsController < BaseController
       def show
-        prediction = current_user.tournament_predictions.find_by(tournament: tournament)
+        prediction = current_user.tournament_predictions
+                                 .includes(:champion, :runner_up, :third_place, :fourth_place, top_scorer: :team)
+                                 .find_by(tournament: tournament)
         render json: prediction && TournamentPredictionBlueprint.render_as_hash(prediction)
       end
 

@@ -105,4 +105,81 @@ RSpec.describe "Api::V1::MatchesController", type: :request do
       expect(ids.size).to eq(1)
     end
   end
+
+  describe "GET /api/v1/matches/next" do
+    it "returns the soonest scheduled match still ahead of now, with its teams" do
+      soonest = create(:match, kickoff_at: 2.hours.from_now)
+      create(:match, kickoff_at: 3.days.from_now)       # later scheduled
+      create(:match, :finished, kickoff_at: 1.hour.from_now) # sooner but finished
+
+      get "/api/v1/matches/next", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include("id" => soonest.id)
+      expect(response.parsed_body["home_team"]).to include("flag_url", "id" => soonest.home_team_id)
+    end
+
+    it "ignores past kickoffs" do
+      create(:match, :finished, kickoff_at: 2.days.ago)
+      upcoming = create(:match, kickoff_at: 5.days.from_now)
+
+      get "/api/v1/matches/next", headers: headers
+
+      expect(response.parsed_body).to include("id" => upcoming.id)
+    end
+
+    it "returns null when no scheduled match is upcoming" do
+      create(:match, :finished, kickoff_at: 2.days.ago)
+
+      get "/api/v1/matches/next", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to be_nil
+    end
+  end
+
+  describe "GET /api/v1/matches/last_finished" do
+    it "returns the most recently kicked-off finished match, with teams and scores" do
+      create(:match, :finished, kickoff_at: 5.days.ago)
+      latest = create(:match, :finished, kickoff_at: 1.day.ago, home_score: 3, away_score: 2)
+      create(:match, kickoff_at: 1.day.from_now) # scheduled, ignored
+
+      get "/api/v1/matches/last_finished", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include("id" => latest.id, "home_score" => 3, "away_score" => 2)
+      expect(response.parsed_body["away_team"]).to include("id" => latest.away_team_id)
+    end
+
+    it "embeds my_prediction when authenticated" do
+      latest = create(:match, :finished, kickoff_at: 1.day.ago)
+      create(:prediction, user: user, match: latest, predicted_home_score: 1, predicted_away_score: 0)
+      login_as(user, scope: :user)
+
+      get "/api/v1/matches/last_finished", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["my_prediction"]).to include(
+        "predicted_home_score" => 1, "predicted_away_score" => 0
+      )
+    end
+
+    it "omits my_prediction when not authenticated" do
+      create(:match, :finished, kickoff_at: 1.day.ago)
+
+      get "/api/v1/matches/last_finished", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).not_to have_key("my_prediction")
+    end
+
+    it "returns null when nothing is finished" do
+      create(:match, kickoff_at: 1.day.from_now)
+
+      get "/api/v1/matches/last_finished", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to be_nil
+    end
+  end
 end

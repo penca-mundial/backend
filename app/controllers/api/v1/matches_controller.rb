@@ -32,6 +32,23 @@ module Api
                content_type: "application/json"
       end
 
+      # The soonest scheduled match still ahead of now (for the Home countdown);
+      # null when the fixture has no upcoming match.
+      def next_match
+        match = Match.status_scheduled.where(kickoff_at: Time.current..)
+                     .includes(:home_team, :away_team).order(:kickoff_at).first
+        render json: match && MatchBlueprint.render_as_hash(match)
+      end
+
+      # The most recently kicked-off finished match (with its scores). Embeds the
+      # signed-in user's prediction for it, like #show; null when none is finished.
+      def last_finished
+        match = Match.status_finished.includes(:home_team, :away_team).order(kickoff_at: :desc).first
+        payload = match && MatchBlueprint.render_as_hash(match)
+        payload = payload.merge(my_prediction: my_prediction_hash(match)) if payload && current_user
+        render json: payload
+      end
+
       private
 
       def filter_params

@@ -43,6 +43,49 @@ RSpec.describe "Api::V1::TournamentPredictionsController", type: :request do
         expect(response).to have_http_status(:ok)
         expect(response.parsed_body["champion_id"]).to eq(champion.id)
       end
+
+      it "embeds the podium teams and the top scorer, keeping the raw ids and lock state" do
+        champion = participating_team(tournament)
+        runner_up = participating_team(tournament)
+        scorer = create(:player, team: champion)
+        create(:tournament_prediction, user: user, tournament: tournament,
+                                       champion: champion, runner_up: runner_up, top_scorer: scorer)
+
+        get "/api/v1/tournament_predictions/me", headers: headers
+
+        expect(response).to have_http_status(:ok)
+        body = response.parsed_body
+        expect(body["champion"]).to include("flag_url", "code3",
+                                            "name" => champion.name, "id" => champion.id)
+        expect(body["runner_up"]).to include("id" => runner_up.id)
+        expect(body["top_scorer"]).to include("name" => scorer.name, "id" => scorer.id)
+        expect(body["top_scorer"]["team"]).to include("id" => champion.id)
+        # Raw FK ids stay for the editor; lock state preserved.
+        expect(body).to include("locked", "locked_at",
+                                "champion_id" => champion.id, "top_scorer_id" => scorer.id)
+      end
+
+      it "does not issue an N+1 to embed the podium teams and top scorer" do
+        champion = participating_team(tournament)
+        create(:tournament_prediction, user: user, tournament: tournament,
+                                       champion: champion, runner_up: participating_team(tournament),
+                                       third_place: participating_team(tournament),
+                                       fourth_place: participating_team(tournament),
+                                       top_scorer: create(:player, team: champion))
+
+        query_count = 0
+        counter = lambda do |_n, _s, _f, _id, payload|
+          query_count += 1 unless %w[SCHEMA TRANSACTION].include?(payload[:name])
+        end
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+          get "/api/v1/tournament_predictions/me", headers: headers
+        end
+
+        # Preloaded: the prediction, each podium belongs_to (a constant 4 — Rails
+        # preloads per association name), the scorer and its team. Bounded and
+        # independent of data size, not one query per embedded record.
+        expect(query_count).to be <= 12
+      end
     end
   end
 
