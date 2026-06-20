@@ -120,6 +120,40 @@ RSpec.describe "Api::V1::MatchesController", type: :request do
         expect(row["my_prediction"]).to be_nil
       end
 
+      # SCRUM-312: live knockout projection — the advance component is gated on the
+      # user's advancing-team pick, so a score-only (no pick) prediction is not
+      # inflated by a phantom correct_advance against the still-undefined advance.
+      it "projects a live knockout's result only when the user did not pick who advances" do
+        create(:scoring_rule, rule_type: "correct_advance", points: 3)
+        knockout = create(:match, :live, :round_of_16, kickoff_at: 1.hour.ago,
+                                                       home_score: 1, away_score: 0, advancing_team_id: nil)
+        # Bypass validation to mimic legacy data (knockout normally requires a pick).
+        Prediction.new(user: user, match: knockout, predicted_home_score: 1, predicted_away_score: 0,
+                       predicted_advancing_team_id: nil).save!(validate: false)
+
+        get "/api/v1/matches/live", headers: headers
+
+        row = response.parsed_body.find { |m| m["id"] == knockout.id }
+        expect(row["my_prediction"]).to eq(
+          "predicted_home_score" => 1, "predicted_away_score" => 0, "points" => 5
+        )
+      end
+
+      it "projects a live knockout with the advance component (0 while undefined) when the user picked" do
+        create(:scoring_rule, rule_type: "correct_advance", points: 3)
+        knockout = create(:match, :live, :round_of_16, kickoff_at: 1.hour.ago,
+                                                       home_score: 1, away_score: 0, advancing_team_id: nil)
+        create(:prediction, user: user, match: knockout, predicted_home_score: 1, predicted_away_score: 0,
+                            predicted_advancing_team_id: knockout.home_team_id)
+
+        get "/api/v1/matches/live", headers: headers
+
+        row = response.parsed_body.find { |m| m["id"] == knockout.id }
+        # Live KO has not decided who advances yet, so advance scores 0; the result
+        # (1-0 exact) gives 5 — same as the no-pick case, i.e. NO phantom inflation.
+        expect(row["my_prediction"]["points"]).to eq(5)
+      end
+
       it "does not issue an N+1 across live matches" do
         3.times do |i|
           m = create(:match, :live, kickoff_at: (i + 1).hours.ago, home_score: 1, away_score: 0)
