@@ -41,6 +41,11 @@ Rails.application.routes.draw do
       patch "users/me",          to: "users#update"
       post  "users/me/username", to: "users#claim_username"
 
+      # Public profile of any user (authenticated viewers). The static /me paths
+      # above precede these so they aren't swallowed by the :id segment.
+      get "users/:id/profile",     to: "user_profiles#show"
+      get "users/:id/predictions", to: "user_profiles#predictions"
+
       # Match predictions (per-match score + knockout advancing team).
       get    "predictions/me",  to: "predictions#index"
       put    "predictions",     to: "predictions#upsert"
