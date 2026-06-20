@@ -39,4 +39,20 @@ RSpec.describe Matches::UserScoreboard do
 
     expect(entry[:my_prediction]).to be_nil
   end
+
+  # SCRUM-312: a LIVE knockout prediction with no advancing-team pick must not be
+  # inflated by phantom advance points (predicted nil == match's undefined nil).
+  it "does not add phantom advance points on a live knockout without an advance pick" do
+    create(:scoring_rule, rule_type: "correct_advance", points: 3)
+    ko = create(:match, :live, :round_of_16, tournament: tournament, kickoff_at: 1.hour.ago,
+                                             home_score: 1, away_score: 0, advancing_team_id: nil)
+    # Bypass validation to mimic legacy/never-validated data (the model otherwise
+    # requires an advancing pick for knockout — untouched by this fix).
+    Prediction.new(user: user, match: ko, predicted_home_score: 1, predicted_away_score: 0,
+                   predicted_advancing_team_id: nil).save!(validate: false)
+
+    entry = described_class.call(matches: Match.where(id: ko.id), user: user).data[:entries].first
+
+    expect(entry[:my_prediction][:points]).to eq(5) # result only (1-0 exact), no +3 phantom advance
+  end
 end

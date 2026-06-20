@@ -34,7 +34,7 @@ module Scoring
     def attributes_for(prediction)
       eval_data = MatchRuleEvaluator.call(prediction: prediction, match: @match).data
       result_rule = eval_data[:result_rule]
-      advance_rule = eval_data[:advance_rule]
+      advance_rule = advance_rule_for(prediction, eval_data[:advance_rule])
 
       {
         points_result:  points_for(result_rule),
@@ -42,6 +42,20 @@ module Scoring
         multiplier:     multiplier,
         breakdown:      { result_rule:, advance_rule:, multiplier_phase: @match.phase }
       }
+    end
+
+    # The advance component is projected ONLY when the user actually picked who
+    # advances. Without a pick, predicted_advancing_team_id is nil; on a LIVE
+    # knockout the match's advancing_team_id is also still nil, so the evaluator
+    # would read nil == nil as a phantom :correct_advance. Gating on the pick here
+    # (not in MatchRuleEvaluator, whose contract is a finished match) drops the
+    # advance component to nil — the same shape the group stage already has —
+    # while leaving every picked prediction, and the result component, untouched.
+    # SCRUM-312.
+    def advance_rule_for(prediction, evaluated_rule)
+      return nil if prediction.predicted_advancing_team_id.blank?
+
+      evaluated_rule
     end
 
     # The points this prediction earns at the match's current score, derived by
