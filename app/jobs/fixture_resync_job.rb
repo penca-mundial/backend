@@ -14,10 +14,17 @@ class FixtureResyncJob < ApplicationJob
   def perform
     result = FootballData::SyncFixtures.call(incremental: true)
 
-    if result.success?
-      Rails.logger.info("FixtureResyncJob: created #{result.data[:matches_created]} newly-resolved match(es)")
-    else
+    unless result.success?
       Rails.logger.error("FixtureResyncJob: incremental fixtures re-sync failed: #{result.errors.to_sentence}")
+      return
     end
+
+    created = result.data[:matches_created]
+    Rails.logger.info("FixtureResyncJob: created #{created} newly-resolved match(es)")
+
+    # Newly-resolved knockout matches changed the bracket: rebuild its topology
+    # AFTER the sync, in a separate isolated job (a build failure can't touch the
+    # sync). Gated on a real change so idle resyncs don't trigger a rebuild.
+    BracketBuildJob.perform_later if created.positive?
   end
 end

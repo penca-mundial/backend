@@ -1,34 +1,35 @@
-# Round-of-32 canonical vertical order for the FIFA World Cup 2026 (Tournament
-# external_code "WC"). Consumed by Brackets::BuildTopology to set bracket_position
-# on the first knockout round; later rounds derive their order from the
-# feeds_into graph, so only this round needs a curated table.
+# Round-of-32 canonical VERTICAL order for the FIFA World Cup 2026 (Tournament
+# external_code "WC"). Official bracket data (verified).
 #
-# ┌───────────────────────────────────────────────────────────────────────────┐
-# │ ⚠️  PLACEHOLDER DATA — VERIFY BEFORE RELYING ON IT                          │
-# │ The STRUCTURE is correct (16 slots; each determinate side = a unique group  │
-# │ winner/runner-up; a "vs best third" side is { position: 3 } with no group,  │
-# │ because the third's identity is FIFA Annex C and irrelevant to the ORDER).  │
-# │ The group letters / pairings below are a self-consistent placeholder and    │
-# │ MUST be replaced with the official 2026 bracket. Safety net: the builder    │
-# │ logs a visible warning (reconciliation) when these positions disagree with  │
-# │ the matches football-data actually publishes, so a wrong file is loud, not  │
-# │ silent.                                                                     │
-# └───────────────────────────────────────────────────────────────────────────┘
+# `order` is the bracket_position (top-to-bottom drawing order), derived from the
+# knockout TREE, NOT the FIFA match number: the two R32 matches that feed the
+# same R16 are adjacent (e.g. M74 and M77 both feed R16 M89 -> orders 0 and 1).
+# The builder anchors each R32 match to its slot by the group positions of its
+# teams; later rounds derive their order from the feeds_into graph. A "vs best
+# third" side is `{ position: 3 }` with no group — the third's identity (Annex C)
+# does not affect the ORDER. The builder logs a visible warning if these
+# positions ever disagree with the matches football-data publishes.
+#
+# Slot -> FIFA match (sides as in the official draw):
+#   0:M74 1ºE/3º   1:M77 1ºI/3º   2:M73 2ºA/2ºB  3:M75 1ºF/2ºC
+#   4:M83 2ºK/2ºL  5:M84 1ºH/2ºJ  6:M81 1ºD/3º   7:M82 1ºG/3º
+#   8:M76 1ºC/2ºF  9:M78 2ºE/2ºI 10:M79 1ºA/3º  11:M80 1ºL/3º
+#  12:M86 1ºJ/2ºH 13:M88 2ºD/2ºG 14:M85 1ºB/3º  15:M87 1ºK/3º
 first_round: round_of_32
 slots:
-  - { order: 0,  sides: [ { group: "A", position: 1 }, { group: "B", position: 2 } ] }
-  - { order: 1,  sides: [ { group: "C", position: 1 }, { group: "D", position: 2 } ] }
-  - { order: 2,  sides: [ { group: "E", position: 1 }, { group: "F", position: 2 } ] }
-  - { order: 3,  sides: [ { group: "G", position: 1 }, { group: "H", position: 2 } ] }
-  - { order: 4,  sides: [ { group: "I", position: 1 }, { group: "J", position: 2 } ] }
-  - { order: 5,  sides: [ { group: "K", position: 1 }, { group: "L", position: 2 } ] }
-  - { order: 6,  sides: [ { group: "B", position: 1 }, { position: 3 } ] }
-  - { order: 7,  sides: [ { group: "D", position: 1 }, { position: 3 } ] }
-  - { order: 8,  sides: [ { group: "F", position: 1 }, { position: 3 } ] }
-  - { order: 9,  sides: [ { group: "H", position: 1 }, { position: 3 } ] }
-  - { order: 10, sides: [ { group: "J", position: 1 }, { position: 3 } ] }
-  - { order: 11, sides: [ { group: "L", position: 1 }, { position: 3 } ] }
-  - { order: 12, sides: [ { group: "A", position: 2 }, { position: 3 } ] }
-  - { order: 13, sides: [ { group: "C", position: 2 }, { position: 3 } ] }
-  - { order: 14, sides: [ { group: "E", position: 2 }, { group: "G", position: 2 } ] }
-  - { order: 15, sides: [ { group: "I", position: 2 }, { group: "K", position: 2 } ] }
+  - { order: 0,  sides: [ { group: "E", position: 1 }, { position: 3 } ] }              # M74
+  - { order: 1,  sides: [ { group: "I", position: 1 }, { position: 3 } ] }              # M77
+  - { order: 2,  sides: [ { group: "A", position: 2 }, { group: "B", position: 2 } ] }  # M73
+  - { order: 3,  sides: [ { group: "F", position: 1 }, { group: "C", position: 2 } ] }  # M75
+  - { order: 4,  sides: [ { group: "K", position: 2 }, { group: "L", position: 2 } ] }  # M83
+  - { order: 5,  sides: [ { group: "H", position: 1 }, { group: "J", position: 2 } ] }  # M84
+  - { order: 6,  sides: [ { group: "D", position: 1 }, { position: 3 } ] }              # M81
+  - { order: 7,  sides: [ { group: "G", position: 1 }, { position: 3 } ] }              # M82
+  - { order: 8,  sides: [ { group: "C", position: 1 }, { group: "F", position: 2 } ] }  # M76
+  - { order: 9,  sides: [ { group: "E", position: 2 }, { group: "I", position: 2 } ] }  # M78
+  - { order: 10, sides: [ { group: "A", position: 1 }, { position: 3 } ] }              # M79
+  - { order: 11, sides: [ { group: "L", position: 1 }, { position: 3 } ] }              # M80
+  - { order: 12, sides: [ { group: "J", position: 1 }, { group: "H", position: 2 } ] }  # M86
+  - { order: 13, sides: [ { group: "D", position: 2 }, { group: "G", position: 2 } ] }  # M88
+  - { order: 14, sides: [ { group: "B", position: 1 }, { position: 3 } ] }              # M85
+  - { order: 15, sides: [ { group: "K", position: 1 }, { position: 3 } ] }              # M87
