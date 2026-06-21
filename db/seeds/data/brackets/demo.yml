@@ -1,0 +1,10 @@
+# Canonical first-round order for the DEMO tournament (external_code "DEMO"),
+# used by db/seeds/brackets_demo.rb and the builder specs. First round is the
+# quarter_final (8 teams, groups A/B); two slots are "vs best third" to exercise
+# the group-less { position: 3 } anchoring.
+first_round: quarter_final
+slots:
+  - { order: 0, sides: [ { group: "A", position: 1 }, { group: "B", position: 2 } ] }
+  - { order: 1, sides: [ { group: "B", position: 1 }, { group: "A", position: 2 } ] }
+  - { order: 2, sides: [ { position: 3 }, { group: "B", position: 4 } ] }
+  - { order: 3, sides: [ { position: 3 }, { group: "A", position: 4 } ] }
