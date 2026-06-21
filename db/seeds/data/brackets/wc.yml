@@ -1,0 +1,34 @@
+# Round-of-32 canonical vertical order for the FIFA World Cup 2026 (Tournament
+# external_code "WC"). Consumed by Brackets::BuildTopology to set bracket_position
+# on the first knockout round; later rounds derive their order from the
+# feeds_into graph, so only this round needs a curated table.
+#
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ ⚠️  PLACEHOLDER DATA — VERIFY BEFORE RELYING ON IT                          │
+# │ The STRUCTURE is correct (16 slots; each determinate side = a unique group  │
+# │ winner/runner-up; a "vs best third" side is { position: 3 } with no group,  │
+# │ because the third's identity is FIFA Annex C and irrelevant to the ORDER).  │
+# │ The group letters / pairings below are a self-consistent placeholder and    │
+# │ MUST be replaced with the official 2026 bracket. Safety net: the builder    │
+# │ logs a visible warning (reconciliation) when these positions disagree with  │
+# │ the matches football-data actually publishes, so a wrong file is loud, not  │
+# │ silent.                                                                     │
+# └───────────────────────────────────────────────────────────────────────────┘
+first_round: round_of_32
+slots:
+  - { order: 0,  sides: [ { group: "A", position: 1 }, { group: "B", position: 2 } ] }
+  - { order: 1,  sides: [ { group: "C", position: 1 }, { group: "D", position: 2 } ] }
+  - { order: 2,  sides: [ { group: "E", position: 1 }, { group: "F", position: 2 } ] }
+  - { order: 3,  sides: [ { group: "G", position: 1 }, { group: "H", position: 2 } ] }
+  - { order: 4,  sides: [ { group: "I", position: 1 }, { group: "J", position: 2 } ] }
+  - { order: 5,  sides: [ { group: "K", position: 1 }, { group: "L", position: 2 } ] }
+  - { order: 6,  sides: [ { group: "B", position: 1 }, { position: 3 } ] }
+  - { order: 7,  sides: [ { group: "D", position: 1 }, { position: 3 } ] }
+  - { order: 8,  sides: [ { group: "F", position: 1 }, { position: 3 } ] }
+  - { order: 9,  sides: [ { group: "H", position: 1 }, { position: 3 } ] }
+  - { order: 10, sides: [ { group: "J", position: 1 }, { position: 3 } ] }
+  - { order: 11, sides: [ { group: "L", position: 1 }, { position: 3 } ] }
+  - { order: 12, sides: [ { group: "A", position: 2 }, { position: 3 } ] }
+  - { order: 13, sides: [ { group: "C", position: 2 }, { position: 3 } ] }
+  - { order: 14, sides: [ { group: "E", position: 2 }, { group: "G", position: 2 } ] }
+  - { order: 15, sides: [ { group: "I", position: 2 }, { group: "K", position: 2 } ] }
