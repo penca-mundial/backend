@@ -106,6 +106,11 @@ Rails.application.routes.draw do
       # as the official endpoint above; authenticated, additive.
       get "tournaments/:id/standings/projected", to: "tournaments/projected_standings#index"
 
+      # Knockout bracket, data-driven (SCRUM-316): existing KO matches with their
+      # topology (feeds_into / bracket_position) and the viewer's locked pick.
+      # Public; my_prediction embedded only for a signed-in viewer.
+      get "tournaments/:id/bracket", to: "tournaments/bracket#index"
+
       # Public teams index, scoped by ?tournament_id= (defaults to current).
       get "teams", to: "teams#index"
 
