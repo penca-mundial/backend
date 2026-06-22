@@ -20,6 +20,13 @@ module Brackets
 
     BRACKETS_DIR = "db/seeds/data/brackets"
 
+    # The slot definitions (order + normalized sides) and the phase of the first
+    # knockout round. `slots`/`first_round` are read by the projected-bracket
+    # service (SCRUM-319) to BUILD crosses from group positions — the forward
+    # direction, vs position_for's lookup; first_round keeps which round that is
+    # data-driven (never hard-coded).
+    attr_reader :slots, :first_round
+
     # The table for a competition code, or nil when no curated file exists (the
     # builder then wires edges but leaves bracket_position alone).
     def self.from_file(external_code)
@@ -28,10 +35,12 @@ module Brackets
       path = Rails.root.join(BRACKETS_DIR, "#{external_code.downcase}.yml")
       return nil unless File.exist?(path)
 
-      new(slots: YAML.safe_load_file(path).fetch("slots"))
+      data = YAML.safe_load_file(path)
+      new(slots: data.fetch("slots"), first_round: data["first_round"])
     end
 
-    def initialize(slots:)
+    def initialize(slots:, first_round: nil)
+      @first_round = first_round
       @slots = slots.map do |slot|
         Slot.new(order: slot.fetch("order"), sides: slot.fetch("sides").map { |side| normalize(side) })
       end
