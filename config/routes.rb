@@ -111,6 +111,11 @@ Rails.application.routes.draw do
       # Public; my_prediction embedded only for a signed-in viewer.
       get "tournaments/:id/bracket", to: "tournaments/bracket#index"
 
+      # Round-of-32 PROJECTED for the authenticated user (SCRUM-319): the user's
+      # group predictions blended with real results, derived crosses. Authed (the
+      # projection is personal); a confirmed real cross wins over the projection.
+      get "tournaments/:id/bracket/projected", to: "tournaments/projected_bracket#index"
+
       # Public teams index, scoped by ?tournament_id= (defaults to current).
       get "teams", to: "teams#index"
 
