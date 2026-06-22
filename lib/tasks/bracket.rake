@@ -24,4 +24,12 @@ namespace :bracket do
     puts "bracket demo seeded: tournament=#{summary[:tournament_id]} " \
          "edges=#{summary[:edges]} positions=#{summary[:positions]}"
   end
+
+  desc "Load the 32-team demo bracket (full 5 rounds + third place) for frontend preview"
+  task demo32: :environment do
+    require Rails.root.join("db/seeds/brackets_demo32")
+    summary = Seeds::BracketsDemo32.call
+    puts "bracket demo32 seeded: tournament=#{summary[:tournament_id]} " \
+         "edges=#{summary[:edges]} positions=#{summary[:positions]}"
+  end
 end
