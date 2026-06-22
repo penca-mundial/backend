@@ -1,0 +1,24 @@
+# Canonical first-round order for the DEMO32 preview tournament (external_code
+# "DEMO32"): a full 32-team knockout starting at the round_of_32 (dieciseisavos),
+# 8 groups (A-H) of 4 where all four advance. `order` is the vertical drawing
+# order — the two R32 matches feeding the same R16 are adjacent (0/1, 2/3, ...).
+# Must match db/seeds/brackets_demo32.rb. All sides are determinate (group,
+# position), so no { position: 3 } third slots here.
+first_round: round_of_32
+slots:
+  - { order: 0,  sides: [ { group: "A", position: 1 }, { group: "B", position: 2 } ] }
+  - { order: 1,  sides: [ { group: "C", position: 1 }, { group: "D", position: 2 } ] }
+  - { order: 2,  sides: [ { group: "E", position: 1 }, { group: "F", position: 2 } ] }
+  - { order: 3,  sides: [ { group: "G", position: 1 }, { group: "H", position: 2 } ] }
+  - { order: 4,  sides: [ { group: "A", position: 2 }, { group: "B", position: 1 } ] }
+  - { order: 5,  sides: [ { group: "C", position: 2 }, { group: "D", position: 1 } ] }
+  - { order: 6,  sides: [ { group: "E", position: 2 }, { group: "F", position: 1 } ] }
+  - { order: 7,  sides: [ { group: "G", position: 2 }, { group: "H", position: 1 } ] }
+  - { order: 8,  sides: [ { group: "A", position: 3 }, { group: "B", position: 4 } ] }
+  - { order: 9,  sides: [ { group: "C", position: 3 }, { group: "D", position: 4 } ] }
+  - { order: 10, sides: [ { group: "E", position: 3 }, { group: "F", position: 4 } ] }
+  - { order: 11, sides: [ { group: "G", position: 3 }, { group: "H", position: 4 } ] }
+  - { order: 12, sides: [ { group: "A", position: 4 }, { group: "B", position: 3 } ] }
+  - { order: 13, sides: [ { group: "C", position: 4 }, { group: "D", position: 3 } ] }
+  - { order: 14, sides: [ { group: "E", position: 4 }, { group: "F", position: 3 } ] }
+  - { order: 15, sides: [ { group: "G", position: 4 }, { group: "H", position: 3 } ] }
