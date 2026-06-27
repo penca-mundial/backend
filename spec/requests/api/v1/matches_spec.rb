@@ -106,7 +106,8 @@ RSpec.describe "Api::V1::MatchesController", type: :request do
         expect(response).to have_http_status(:ok)
         row = response.parsed_body.first
         expect(row["my_prediction"]).to eq(
-          "predicted_home_score" => 2, "predicted_away_score" => 1, "points" => 5
+          "predicted_home_score" => 2, "predicted_away_score" => 1,
+          "predicted_advancing_team_id" => nil, "points" => 5
         )
       end
 
@@ -135,7 +136,8 @@ RSpec.describe "Api::V1::MatchesController", type: :request do
 
         row = response.parsed_body.find { |m| m["id"] == knockout.id }
         expect(row["my_prediction"]).to eq(
-          "predicted_home_score" => 1, "predicted_away_score" => 0, "points" => 5
+          "predicted_home_score" => 1, "predicted_away_score" => 0,
+          "predicted_advancing_team_id" => nil, "points" => 5
         )
       end
 
@@ -289,8 +291,27 @@ RSpec.describe "Api::V1::MatchesController", type: :request do
 
         expect(response).to have_http_status(:ok)
         expect(response.parsed_body.first["my_prediction"]).to eq(
-          "predicted_home_score" => 3, "predicted_away_score" => 2, "points" => 5
+          "predicted_home_score" => 3, "predicted_away_score" => 2,
+          "predicted_advancing_team_id" => nil, "points" => 5
         )
+      end
+
+      # SCRUM-323: the Home advance chip needs BOTH the user's pick
+      # (predicted_advancing_team_id, in the compact my_prediction) and the real
+      # advancing_team_id (already on the match payload via MatchBlueprint).
+      it "includes predicted_advancing_team_id in my_prediction for a knockout with an advance pick" do
+        create(:scoring_rule, rule_type: "correct_advance", points: 3)
+        ko = create(:match, :finished, :round_of_16, tournament: tournament, kickoff_at: 1.day.ago,
+                                                     home_score: 1, away_score: 0)
+        ko.update!(advancing_team_id: ko.home_team_id) # home advanced for real
+        create(:prediction, user: user, match: ko, predicted_home_score: 1, predicted_away_score: 0,
+                            predicted_advancing_team_id: ko.home_team_id)
+
+        get "/api/v1/matches/recent_finished", headers: headers
+
+        row = response.parsed_body.first
+        expect(row["my_prediction"]).to include("predicted_advancing_team_id" => ko.home_team_id)
+        expect(row).to include("advancing_team_id" => ko.home_team_id)
       end
 
       it "nulls my_prediction when the user has no prediction" do

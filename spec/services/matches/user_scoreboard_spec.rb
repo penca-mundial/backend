@@ -15,7 +15,22 @@ RSpec.describe Matches::UserScoreboard do
 
     entry = described_class.call(matches: Match.where(id: match.id), user: user).data[:entries].first
 
-    expect(entry[:my_prediction]).to eq(predicted_home_score: 1, predicted_away_score: 0, points: 5)
+    expect(entry[:my_prediction]).to eq(
+      predicted_home_score: 1, predicted_away_score: 0, predicted_advancing_team_id: nil, points: 5
+    )
+  end
+
+  it "carries the picked advancing team for a knockout prediction" do
+    create(:scoring_rule, rule_type: "correct_advance", points: 3)
+    ko = create(:match, :finished, :round_of_16, tournament: tournament, kickoff_at: 1.day.ago,
+                                                 home_score: 1, away_score: 0)
+    ko.update!(advancing_team_id: ko.home_team_id)
+    create(:prediction, user: user, match: ko, predicted_home_score: 1, predicted_away_score: 0,
+                        predicted_advancing_team_id: ko.home_team_id)
+
+    entry = described_class.call(matches: Match.where(id: ko.id), user: user).data[:entries].first
+
+    expect(entry[:my_prediction][:predicted_advancing_team_id]).to eq(ko.home_team_id)
   end
 
   it "computes points on the fly from the calculator, not from a stored PredictionScore" do
