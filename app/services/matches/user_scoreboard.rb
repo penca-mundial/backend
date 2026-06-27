@@ -35,18 +35,22 @@ module Matches
       MatchBlueprint.render_as_hash(match).merge(my_prediction: my_prediction(match))
     end
 
-    # The compact prediction projection: the picked score plus the points it
-    # earns against the match's current score (the calculator recomputes from the
-    # rules — it does not read a saved PredictionScore). null when the user has no
-    # prediction for this match.
+    # The compact prediction projection: the picked score, the picked advancing
+    # team (knockout; null in the group stage and when no pick was made), and the
+    # points it earns against the match's current score (the calculator recomputes
+    # from the rules — it does not read a saved PredictionScore). The advancing
+    # pick lets the Home/live cards render the advance chip (SCRUM-323) without a
+    # second request; the real advancing_team_id already rides the match payload
+    # (MatchBlueprint). null when the user has no prediction for this match.
     def my_prediction(match)
       prediction = predictions_by_match[match.id]
       return nil unless prediction
 
       {
-        predicted_home_score: prediction.predicted_home_score,
-        predicted_away_score: prediction.predicted_away_score,
-        points:               calculator_for(match).total_for(prediction)
+        predicted_home_score:        prediction.predicted_home_score,
+        predicted_away_score:        prediction.predicted_away_score,
+        predicted_advancing_team_id: prediction.predicted_advancing_team_id,
+        points:                      calculator_for(match).total_for(prediction)
       }
     end
 
