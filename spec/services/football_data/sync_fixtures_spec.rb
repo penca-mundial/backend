@@ -240,6 +240,26 @@ RSpec.describe FootballData::SyncFixtures do
 
       expect(Match.find_by(external_id: "1001").advancing_team_id).to be_nil
     end
+
+    # Regression (prod incident, match #77): a penalty shootout leaves score.winner nil,
+    # so the advancing team must come from the penalty aggregate (penalties / fullTime).
+    it "resolves the advancing team from a penalty shootout when winner is nil" do
+      stub_matches("matches" => [
+        { "id" => 1006, "utcDate" => "2026-07-10T18:00:00Z", "status" => "FINISHED", "stage" => "LAST_32",
+          "homeTeam" => { "id" => 1 }, "awayTeam" => { "id" => 2 },
+          "score" => { "winner" => nil, "duration" => "PENALTY_SHOOTOUT",
+                       "regularTime" => { "home" => 1, "away" => 1 },
+                       "penalties" => { "home" => 5, "away" => 5 },
+                       "fullTime" => { "home" => 5, "away" => 6 } } }
+      ])
+
+      described_class.call
+
+      away_team = Team.find_by(external_id: "2")
+      expect(Match.find_by(external_id: "1006")).to have_attributes(
+        phase: "round_of_32", home_score: 1, away_score: 1, advancing_team_id: away_team.id
+      )
+    end
   end
 
   describe "incremental re-sync (create-on-resolve)" do

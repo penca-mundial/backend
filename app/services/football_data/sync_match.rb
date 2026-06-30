@@ -88,8 +88,10 @@ module FootballData
       @match.home_score = result["home"] unless result["home"].nil?
       @match.away_score = result["away"] unless result["away"].nil?
 
-      # winner already reflects ET/penalties, so we never derive it from goals.
-      @match.advancing_team_id = advancing_team_id_from(score["winner"])
+      # winner reflects a regulation or extra-time result; we never derive it from goals.
+      # A penalty shootout is the exception (football-data leaves winner nil there), handled
+      # inside advancing_team_id_from from the penalty aggregate.
+      @match.advancing_team_id = advancing_team_id_from(score)
 
       @match.minute = live_minute(data)
       @match.kickoff_at = Time.zone.parse(data["utcDate"]) if data["utcDate"].present?
@@ -97,21 +99,39 @@ module FootballData
       @match.last_synced_at = Time.current
     end
 
-    # Knockout advancing team from score.winner. nil for the group stage (which
-    # has no advancing team) and for DRAW / missing / unknown winner — anomalous
-    # for a finished KO, so it's logged.
-    def advancing_team_id_from(winner)
+    # Knockout advancing team. From score.winner for a regulation or extra-time
+    # result; nil for the group stage. A penalty shootout leaves winner nil
+    # (football-data does not populate it), so we resolve it from the shootout
+    # aggregate once the match is finished.
+    def advancing_team_id_from(score)
       return nil if @match.phase_group_stage?
 
-      case winner
+      case score["winner"]
       when "HOME_TEAM" then @match.home_team_id
       when "AWAY_TEAM" then @match.away_team_id
       else
-        if @match.status_finished?
-          log_warn("KO match #{@match.external_id} finished without a resolvable winner: #{winner.inspect}")
-        end
-        nil
+        shootout_advancing_team_id(score)
       end
+    end
+
+    # Resolve a penalty-shootout winner only once the match is FINISHED — a live
+    # shootout has no settled result, and reading the running score would set a
+    # phantom advancing team. Prefer the penalties field; fall back to the
+    # penalty-inclusive fullTime when penalties are absent or still tied. A finished
+    # KO that resolves to nobody is anomalous, so it's logged.
+    def shootout_advancing_team_id(score)
+      return nil unless @match.status_finished?
+
+      %w[penalties fullTime].each do |key|
+        side = score[key] || {}
+        home, away = side["home"], side["away"]
+        next unless home && away && home != away
+
+        return home > away ? @match.home_team_id : @match.away_team_id
+      end
+
+      log_warn("KO match #{@match.external_id} finished without a resolvable winner: #{score["winner"].inspect}")
+      nil
     end
 
     # Resolve the match minute from the live payload:

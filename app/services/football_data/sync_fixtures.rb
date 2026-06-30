@@ -169,7 +169,7 @@ module FootballData
         group: GroupNormalizer.call(data["group"]),
         home_score: result["home"] || 0,
         away_score: result["away"] || 0,
-        advancing_team_id: advancing_team_id_for(score["winner"], phase: phase, home: home, away: away,
+        advancing_team_id: advancing_team_id_for(score, phase: phase, home: home, away: away,
                                                  status: status, external_id: data["id"])
       )
       true
@@ -185,21 +185,37 @@ module FootballData
       false
     end
 
-    # Knockout advancing team from score.winner (already reflects ET/penalties).
-    # nil for the group stage and for DRAW / missing / unknown winner —
-    # anomalous for a finished KO, so it's logged.
-    def advancing_team_id_for(winner, phase:, home:, away:, status:, external_id:)
+    # Knockout advancing team from score.winner for a regulation / extra-time
+    # result; nil for the group stage. A penalty shootout leaves winner nil
+    # (football-data does not populate it), so it's resolved from the shootout
+    # aggregate once finished. Mirrors SyncMatch#advancing_team_id_from.
+    def advancing_team_id_for(score, phase:, home:, away:, status:, external_id:)
       return nil if phase == "group_stage"
 
-      case winner
+      case score["winner"]
       when "HOME_TEAM" then home.id
       when "AWAY_TEAM" then away.id
       else
-        if status == "finished"
-          log_warn("KO match #{external_id} finished without a resolvable winner: #{winner.inspect}")
-        end
-        nil
+        shootout_advancing_team_id_for(score, home: home, away: away, status: status, external_id: external_id)
       end
+    end
+
+    # Penalty-shootout winner, resolved only once the match is finished: prefer the
+    # penalties field, fall back to the penalty-inclusive fullTime when penalties are
+    # absent or tied. nil (logged) for a finished KO that still resolves to nobody.
+    def shootout_advancing_team_id_for(score, home:, away:, status:, external_id:)
+      return nil unless status == "finished"
+
+      %w[penalties fullTime].each do |key|
+        side = score[key] || {}
+        h, a = side["home"], side["away"]
+        next unless h && a && h != a
+
+        return h > a ? home.id : away.id
+      end
+
+      log_warn("KO match #{external_id} finished without a resolvable winner: #{score["winner"].inspect}")
+      nil
     end
 
     def team_for(external_id)

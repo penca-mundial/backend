@@ -293,6 +293,50 @@ RSpec.describe FootballData::SyncMatch do
       expect(match.reload.advancing_team_id).to be_nil
     end
 
+    # Regression (prod incident: match #77 GER 1-1 PAR, decided on penalties). football-data
+    # leaves score.winner nil for a PENALTY_SHOOTOUT, so advancing was frozen on the wrong
+    # team and every "Germany advances" pick earned a phantom correct_advance. Resolve the
+    # shootout winner from penalties / the penalty-inclusive fullTime when winner is absent.
+    it "resolves the advancing team from a penalty shootout when winner is nil (fullTime breaks a penalties tie)" do
+      match = create(:match, :round_of_32, external_id: "ko-pk", status: "live", kickoff_at: 1.hour.ago)
+      stub_match("ko-pk", "status" => "FINISHED",
+                          "score" => { "winner" => nil, "duration" => "PENALTY_SHOOTOUT",
+                                       "regularTime" => { "home" => 1, "away" => 1 },
+                                       "penalties" => { "home" => 5, "away" => 5 },
+                                       "fullTime" => { "home" => 5, "away" => 6 } })
+
+      described_class.call(match: match)
+
+      expect(match.reload).to have_attributes(
+        home_score: 1, away_score: 1, advancing_team_id: match.away_team_id
+      )
+    end
+
+    it "resolves the advancing team from the penalties field when it is decisive (home wins)" do
+      match = create(:match, :round_of_32, external_id: "ko-pk2", status: "live", kickoff_at: 1.hour.ago)
+      stub_match("ko-pk2", "status" => "FINISHED",
+                           "score" => { "winner" => nil, "duration" => "PENALTY_SHOOTOUT",
+                                        "regularTime" => { "home" => 2, "away" => 2 },
+                                        "penalties" => { "home" => 4, "away" => 3 },
+                                        "fullTime" => { "home" => 6, "away" => 5 } })
+
+      described_class.call(match: match)
+
+      expect(match.reload.advancing_team_id).to eq(match.home_team_id)
+    end
+
+    it "does not set advancing from the shootout aggregate while the match is still live" do
+      match = create(:match, :round_of_32, external_id: "ko-pk-live", status: "live", kickoff_at: 1.hour.ago)
+      stub_match("ko-pk-live", "status" => "PENALTY_SHOOTOUT", # maps to live, not finished yet
+                               "score" => { "winner" => nil, "duration" => "PENALTY_SHOOTOUT",
+                                            "regularTime" => { "home" => 1, "away" => 1 },
+                                            "fullTime" => { "home" => 5, "away" => 6 } })
+
+      described_class.call(match: match)
+
+      expect(match.reload.advancing_team_id).to be_nil
+    end
+
     it "sets advancing_team_id before enqueuing the scoring job" do
       match = create(:match, :round_of_16, external_id: "ko-enq", status: "live", kickoff_at: 1.hour.ago)
       stub_match("ko-enq", "status" => "FINISHED",
