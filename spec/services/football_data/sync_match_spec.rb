@@ -83,6 +83,44 @@ RSpec.describe FootballData::SyncMatch do
     end
   end
 
+  describe "knockout shootout reconciliation" do
+    it "enqueues staggered reconciliation jobs when a knockout finishes level on 90'" do
+      match = create(:match, :round_of_32, external_id: "ko-pk-fin", status: "live", kickoff_at: 2.hours.ago)
+      stub_match("ko-pk-fin", "status" => "FINISHED",
+                              "score" => { "winner" => nil, "duration" => "PENALTY_SHOOTOUT",
+                                           "regularTime" => { "home" => 1, "away" => 1 },
+                                           "fullTime" => { "home" => 3, "away" => 4 } })
+
+      expect { described_class.call(match: match) }
+        .to have_enqueued_job(ShootoutReconcileJob).with(match.id).exactly(3).times
+    end
+
+    it "does not enqueue reconciliation for a knockout settled in 90'" do
+      match = create(:match, :round_of_32, external_id: "ko-90-fin", status: "live", kickoff_at: 2.hours.ago)
+      stub_match("ko-90-fin", "status" => "FINISHED",
+                              "score" => { "winner" => "HOME_TEAM", "fullTime" => { "home" => 2, "away" => 0 } })
+
+      expect { described_class.call(match: match) }.not_to have_enqueued_job(ShootoutReconcileJob)
+    end
+
+    it "does not enqueue reconciliation for a group-stage draw" do
+      match = create(:match, external_id: "grp-draw-fin", status: "live", kickoff_at: 2.hours.ago) # group_stage
+      stub_match("grp-draw-fin", "status" => "FINISHED",
+                                 "score" => { "fullTime" => { "home" => 1, "away" => 1 } })
+
+      expect { described_class.call(match: match) }.not_to have_enqueued_job(ShootoutReconcileJob)
+    end
+
+    it "does not enqueue on a repeat run (only on the finished transition)" do
+      match = create(:match, :round_of_32, :finished, external_id: "ko-pk-repeat", kickoff_at: 2.hours.ago,
+                                                       home_score: 1, away_score: 1)
+      stub_match("ko-pk-repeat", "status" => "FINISHED",
+                                 "score" => { "winner" => nil, "fullTime" => { "home" => 3, "away" => 4 } })
+
+      expect { described_class.call(match: match) }.not_to have_enqueued_job(ShootoutReconcileJob)
+    end
+  end
+
   describe "final -> finished triggers tournament scoring" do
     it "enqueues TournamentScoringJob (delayed) once when the FINAL finishes" do
       match = create(:match, :final, external_id: "fin-1", status: "live", kickoff_at: 1.hour.ago)
