@@ -24,6 +24,12 @@ module FootballData
     # concurrent matches in a tournament stays well under the 10 req/min limit.
     LIVE_CACHE_TTL = 0.seconds
 
+    # A knockout that finishes level on 90' was decided in extra time or penalties,
+    # where the feed's result is NOT settled at the finishing read (it can freeze the
+    # wrong team — a prod incident). Re-resolve from the settled feed a few minutes
+    # later, staggered so we catch it whenever the feed settles; each run is idempotent.
+    SHOOTOUT_RECONCILE_OFFSETS = [ 5.minutes, 10.minutes, 15.minutes ].freeze
+
     def initialize(match:, client: Client.new)
       @match = match
       @client = client
@@ -45,12 +51,25 @@ module FootballData
         # scoring. The delay lets the scorers feed settle (a goal in the final can
         # move the golden boot); there's no rush once the tournament has ended.
         TournamentScoringJob.set(wait: 30.minutes).perform_later(@match.tournament_id) if @match.phase_final?
+        enqueue_shootout_reconciliation
       end
 
       success(@match)
     end
 
     private
+
+    # Stagger a re-resolution of the advancing team for a knockout decided past 90'
+    # (level on 90' -> extra time or penalties), so a transient/wrong finishing read
+    # is corrected once the feed settles. No-op for group-stage matches and for
+    # knockouts settled in 90' (those already have a clear winner).
+    def enqueue_shootout_reconciliation
+      return if @match.phase_group_stage? || @match.home_score != @match.away_score
+
+      SHOOTOUT_RECONCILE_OFFSETS.each do |delay|
+        ShootoutReconcileJob.set(wait: delay).perform_later(@match.id)
+      end
+    end
 
     # Map the feed status, but never let a stale or lagging "scheduled" payload
     # revert a match the feed has already advanced to live/finished — the
