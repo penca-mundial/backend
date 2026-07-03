@@ -1,9 +1,26 @@
 # ADR-0007 — Reconciliación de scores de partidos finished (el feed puede equivocarse)
 
-- **Estado:** Propuesta (dirección acordada; el detalle de implementación queda en el recon-gate de SCRUM-321)
+- **Estado:** Implementada (2026-07-02)
 - **Fecha:** 2026-06-21
 - **Ámbito:** backend (football-data sync / integridad de datos)
 - **Relacionada con:** SCRUM-321, ADR-0001 (ingesta KO), SCRUM-313 (guard anti-regresión), SCRUM-272 (score 90' + advancing_team)
+
+## Implementación (2026-07-02)
+
+Decisiones 1-4 implementadas, con enfoque **event-driven** (no recurrente): cuando un partido
+pasa a `finished`, `SyncMatch` encola `MatchReconcileJob` a offsets escalonados (5 min, 15 min,
+30 min, 1 h, 2 h, 4 h). Cada job corre `FootballData::ReconcileFinishedMatch`, que re-lee el
+feed y corrige el score de 90' y/o el `advancing_team_id` cuando difieren, re-scoreando
+(idempotente). Así solo se ejecuta cuando efectivamente hubo un partido — nada corre en un día
+sin partidos — y converge apenas el feed se asienta (un ganador de penales reportado tarde, o un
+score cambiado post-cierre: gol anulado, VAR, corrección tardía del feed).
+
+Vive aparte del path live (decisión 2): un fallo de la reconciliación no afecta el sync ni el
+scoring en vivo. El flag `manual_override` en `matches` (decisión 3) protege una corrección
+manual verificada de ser pisada por el feed — `ReconcileFinishedMatch` saltea los partidos
+marcados. Los `ranking_snapshots` ya capturados siguen sin recalcularse (queda como estaba).
+Este mecanismo general **reemplaza** el reconcile específico de shootouts (`ShootoutReconcileJob`),
+que resolvía solo el avance: el general cubre avance **y** score en un único camino.
 
 ## Contexto
 
