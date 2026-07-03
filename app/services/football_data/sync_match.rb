@@ -24,11 +24,11 @@ module FootballData
     # concurrent matches in a tournament stays well under the 10 req/min limit.
     LIVE_CACHE_TTL = 0.seconds
 
-    # A knockout that finishes level on 90' was decided in extra time or penalties,
-    # where the feed's result is NOT settled at the finishing read (it can freeze the
-    # wrong team — a prod incident). Re-resolve from the settled feed a few minutes
-    # later, staggered so we catch it whenever the feed settles; each run is idempotent.
-    SHOOTOUT_RECONCILE_OFFSETS = [ 5.minutes, 10.minutes, 15.minutes ].freeze
+    # A finished match's result is not always settled at the finishing read: a shootout
+    # winner the feed reports late, or a score corrected after the close (disallowed
+    # goal, VAR reversal, late data fix). Re-read from the settled feed at staggered
+    # offsets so we converge whenever it settles; each run is idempotent (ADR-0007).
+    RECONCILE_OFFSETS = [ 5.minutes, 15.minutes, 30.minutes, 1.hour, 2.hours, 4.hours ].freeze
 
     def initialize(match:, client: Client.new)
       @match = match
@@ -51,7 +51,7 @@ module FootballData
         # scoring. The delay lets the scorers feed settle (a goal in the final can
         # move the golden boot); there's no rush once the tournament has ended.
         TournamentScoringJob.set(wait: 30.minutes).perform_later(@match.tournament_id) if @match.phase_final?
-        enqueue_shootout_reconciliation
+        enqueue_reconciliation
       end
 
       success(@match)
@@ -59,15 +59,13 @@ module FootballData
 
     private
 
-    # Stagger a re-resolution of the advancing team for a knockout decided past 90'
-    # (level on 90' -> extra time or penalties), so a transient/wrong finishing read
-    # is corrected once the feed settles. No-op for group-stage matches and for
-    # knockouts settled in 90' (those already have a clear winner).
-    def enqueue_shootout_reconciliation
-      return if @match.phase_group_stage? || @match.home_score != @match.away_score
-
-      SHOOTOUT_RECONCILE_OFFSETS.each do |delay|
-        ShootoutReconcileJob.set(wait: delay).perform_later(@match.id)
+    # Stagger a re-read of the just-finished match so a result that wasn't settled at
+    # the finishing read (a late shootout winner, a post-close score correction) is
+    # reconciled once the feed settles. Event-driven: only a finished match schedules
+    # these, so nothing runs on a day with no matches. Each run is idempotent.
+    def enqueue_reconciliation
+      RECONCILE_OFFSETS.each do |delay|
+        MatchReconcileJob.set(wait: delay).perform_later(@match.id)
       end
     end
 
