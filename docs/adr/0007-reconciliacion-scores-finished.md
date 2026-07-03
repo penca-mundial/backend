@@ -22,6 +22,33 @@ marcados. Los `ranking_snapshots` ya capturados siguen sin recalcularse (queda c
 Este mecanismo general **reemplaza** el reconcile específico de shootouts (`ShootoutReconcileJob`),
 que resolvía solo el avance: el general cubre avance **y** score en un único camino.
 
+## Operación — correcciones manuales de un partido finished
+
+Cuando el feed queda mal en un partido ya cerrado y hay que corregirlo a mano (consola de
+producción), **SIEMPRE seteá `manual_override: true` en el `update!`**. Ese flag hace que la
+reconciliación automática (`MatchReconcileJob`) **saltee** el partido y no lo vuelva a pisar con
+el valor del feed. Sin el flag, si el feed sigue reportando el valor equivocado, la reconciliación
+revertiría tu corrección dentro de la ventana de offsets (hasta 4 h post-cierre).
+
+```ruby
+PaperTrail.request.whodunnit = "fix <match>: <motivo> by <vos>"
+m = Match.find(<id>)
+m.update!(home_score: 4, away_score: 0, manual_override: true)   # <- el flag es clave
+# Si es KO y cambió quién avanza, corregilo también:
+# m.update!(advancing_team_id: <team_id>)
+Scoring::ComputeMatchScores.call(match: m)                       # re-scorea (idempotente)
+```
+
+Notas:
+- Si el feed **coincide** con tu corrección, `manual_override` no es estrictamente necesario (la
+  reconciliación re-aplicaría el mismo valor), pero **poné el flag igual por costumbre** — es la
+  diferencia entre "verificado por un humano" y "lo que diga el feed".
+- No corras `rake football_data:bootstrap` para corregir: re-sincroniza todo, no re-scorea, y
+  pisaría la corrección (incluso con `manual_override`, porque ese path no lo respeta hoy).
+- Una envoltura opcional `Matches::CorrectResult` (score + `advancing` + `manual_override` +
+  re-score + auditoría en un solo llamado) evitaría tener que acordarse del flag; no está
+  implementada aún.
+
 ## Contexto
 
 El 21-jun, en producción, el partido España vs Arabia Saudita (Match id 37, external_id 537371) figuraba **5-0** en la penca cuando el resultado real fue **4-0**. Esto afectó el scoring de usuarios reales (predicciones de ese partido evaluadas contra el marcador equivocado).
