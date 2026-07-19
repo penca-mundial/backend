@@ -161,4 +161,38 @@ RSpec.describe Scoring::ComputeTournamentScores do
     run
     expect { run }.not_to change { tournament.reload.attributes.slice(*result_columns) }
   end
+
+  # Every example above injects a client double, so the default argument is never
+  # evaluated and the constant it names is never resolved. Production takes the
+  # opposite path (TournamentScoringJob passes no client) and blew up there on an
+  # unqualified `Client` resolving under Scoring:: instead of FootballData::.
+  # These examples exercise the real default so a double can't mask it again.
+  describe "the default client (no injection — the production path)" do
+    let(:base) { "https://api.football-data.org/v4" }
+
+    it "resolves FootballData::Client and scores through it" do
+      finish_podium
+      scorer
+      stub_request(:get, "#{base}/competitions/WC/scorers")
+        .to_return(status: 200,
+                   body: { scorers: [ { player: { id: 999 } } ] }.to_json,
+                   headers: { "Content-Type" => "application/json" })
+      prediction = create(:tournament_prediction, tournament: tournament, user: create(:user),
+                          champion: teams[:champion], top_scorer: scorer)
+
+      result = described_class.call(tournament: tournament)
+
+      expect(result).to be_success
+      expect(prediction.reload.tournament_prediction_score)
+        .to have_attributes(points_champion: 50, points_top_scorer: 25)
+    end
+
+    it "builds the default client even when no scorers fetch happens" do
+      tournament.update!(external_code: nil)
+      finish_podium
+      create(:tournament_prediction, tournament: tournament, user: create(:user), champion: teams[:champion])
+
+      expect(described_class.call(tournament: tournament)).to be_success
+    end
+  end
 end

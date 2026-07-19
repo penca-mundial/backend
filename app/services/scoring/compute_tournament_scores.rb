@@ -22,7 +22,9 @@ module Scoring
       top_scorer_correct:   :points_top_scorer
     }.freeze
 
-    def initialize(tournament:, client: Client.new)
+    # The client MUST be fully qualified: an unqualified `Client` resolves under
+    # Module.nesting (Scoring::) and raises NameError at call time.
+    def initialize(tournament:, client: FootballData::Client.new)
       @tournament = tournament
       @client = client
       @points_cache = {}
