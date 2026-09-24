@@ -36,6 +36,11 @@ gem "image_processing", "~> 1.2"
 gem "blueprinter"
 gem "oj"
 
+# Pin json to the 2.x line: json 3.x removes APIs (e.g. quirks_mode) that
+# PaperTrail/serialization rely on and breaks the suite. 2.19.9+ carries the
+# security fix (CVE flagged by bundler-audit) without the breaking major bump.
+gem "json", "~> 2.19"
+
 # Audit log of model changes (enabled per-model later)
 gem "paper_trail"
 
