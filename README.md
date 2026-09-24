@@ -1,107 +1,107 @@
-# Penca Mundial — Backend
+# Magic Penca — Backend API
 
-REST API for the World Cup 2026 prediction platform.
+[![CI](https://github.com/penca-mundial/backend/actions/workflows/ci.yml/badge.svg)](https://github.com/penca-mundial/backend/actions/workflows/ci.yml)
 
-## Stack
+> REST API powering **Magic Penca**, a World Cup 2026 prediction game ("penca") where friends
+> predicted match results, competed in private groups, and climbed live leaderboards.
 
-- Ruby 3.3 / Rails 8 (API-only)
-- PostgreSQL 16
-- `solid_queue` + `solid_cache` (no Redis required)
-- Devise + OmniAuth (Google)
-- football-data.org as match data source
-- Resend for transactional email
+**Status:** 🏆 Ran live during the 2026 FIFA World Cup — now decommissioned and open-sourced as a portfolio piece.
+The hosted services (API, database, email) have been shut down; this repository is preserved to show the code and architecture.
 
-## Setup
+This is the **backend**. The companion single-page app lives in
+[`penca-mundial/frontend`](https://github.com/penca-mundial/frontend).
+
+---
+
+## What it does
+
+Magic Penca is a football prediction platform. Users sign in, predict scores for every World Cup
+match (and a full bracket), and earn points as real results come in. Points feed global and
+per-group leaderboards that update automatically as matches finish.
+
+The backend is an **API-only Rails application** that owns all the domain logic:
+
+- **Authentication** — email/password (Devise, with pwned-password checks) and **Google Sign-In** (OmniAuth), issued as cookie-based sessions consumed by the SPA.
+- **Predictions & scoring** — per-match score predictions and a tournament bracket, scored by a rules engine with phase multipliers (a knockout hit is worth more than a group-stage one).
+- **Groups & leaderboards** — private groups joined by invite code, plus a global pool, each with its own ranking and historical ranking snapshots for standings-over-time charts.
+- **Live match data** — matches, teams, players and standings are synced from [football-data.org](https://www.football-data.org/) and kept fresh by background jobs while games are in play.
+- **Transactional email** — account confirmation and password reset via Resend.
+
+## Architecture
+
+```
+                    Google OAuth
+                         │
+   React SPA  ──HTTPS──▶ Rails API (this repo) ──▶ PostgreSQL (Neon)
+  (Vercel)     JSON      (Render)                       │
+                          │  │                          │
+                          │  └── Solid Queue (in-Puma)  │  jobs: match sync,
+                          │        background jobs ──────┘  scoring, ranking snapshots
+                          │
+                          └── football-data.org  ·  Resend (email)
+```
+
+- **API-only Rails 8.1**, JSON responses serialized with Blueprinter, paginated with Kaminari.
+- **Service objects** (`app/services/**`) hold the business logic — auth, scoring, rankings,
+  brackets, group memberships — each returning a typed `ServiceResult` and kept out of controllers.
+- **Query objects** (`app/queries`) isolate the heavier read paths (leaderboards, profile stats).
+- **Solid Queue** runs the background jobs (match sync, locking predictions at kickoff, scoring,
+  ranking snapshots) with **no Redis dependency** — it can even run inside Puma on a free tier.
+- **CORS** is locked to the SPA origins via the `CORS_ORIGINS` env var; credentials (session
+  cookie) are allowed cross-origin.
+- Secrets come entirely from environment variables / Rails encrypted credentials — nothing is
+  committed to the repo.
+
+## Tech stack
+
+| Area | Choice |
+|------|--------|
+| Language / framework | Ruby 3.3, Rails 8.1 (API-only) |
+| Database | PostgreSQL (hosted on Neon) |
+| Background jobs | Solid Queue (DB-backed, no Redis) |
+| Auth | Devise + `devise-pwned_password`, OmniAuth Google OAuth2 |
+| Serialization | Blueprinter · Pagination: Kaminari |
+| External data | football-data.org (via HTTParty client) |
+| Email | Resend |
+| Testing | RSpec |
+| Hosting | Render (API) · Neon (DB) |
+
+## Running it locally
+
+Requires Docker (the Compose file provides Ruby + PostgreSQL).
 
 ```bash
-git clone git@github.com:penca-mundial/backend.git
+git clone https://github.com/penca-mundial/backend.git
 cd backend
-cp .env.example .env  # fill in values
+cp .env.example .env          # fill in values; the app boots without Google/football-data keys
 docker compose up
 docker compose exec app bin/rails db:create db:migrate db:seed
 ```
 
-API runs at http://localhost:3000
+- API: http://localhost:3000
+- Dev email inbox (Mailcatcher): http://localhost:1080
 
-Mailcatcher UI for dev emails: http://localhost:1080
-
-## Football data
-
-On a fresh deploy, populate the World Cup teams, players and matches from
-football-data.org (set `FOOTBALL_DATA_API_KEY` first):
+Populate World Cup teams, players and matches from football-data.org (set `FOOTBALL_DATA_API_KEY` first):
 
 ```bash
 docker compose exec app bin/rails football_data:bootstrap
 ```
 
-It prints the number of teams, players and matches synced. The task is
-idempotent — re-running updates existing rows instead of duplicating them.
-Live and upcoming matches are then kept fresh automatically by `MatchSyncJob`.
+The task is idempotent — re-running updates existing rows instead of duplicating them. Live and
+upcoming matches are then kept fresh automatically by `MatchSyncJob`.
 
-## Tests
+Run the test suite:
 
 ```bash
 docker compose exec app bundle exec rspec
-docker compose exec app bundle exec rubocop
 ```
 
-## Deployment
+## Configuration
 
-The backend deploys to Render via the `render.yaml` Blueprint. Pushes to `main`
-auto-deploy.
-
-### Connecting the repo to Render (one-time)
-
-1. In the [Render dashboard](https://dashboard.render.com/), choose **New →
-   Blueprint** and select this repository. Render reads `render.yaml` and creates
-   the `penca-backend` web service (Docker, production stage of the Dockerfile).
-2. Provision the database in [Neon](https://neon.tech/) and copy its connection
-   string.
-3. Set the environment variables marked `sync: false` in the service's
-   **Environment** tab:
-   - `RAILS_MASTER_KEY` — contents of `config/master.key`
-   - `DATABASE_URL` — the Neon connection string
-   - `ADMIN_EMAILS`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
-     `FOOTBALL_DATA_API_KEY`, `RESEND_API_KEY`, `CORS_ORIGINS`, `FRONTEND_URL`
-4. Trigger the first deploy. The Docker entrypoint runs `db:prepare` (creating
-   the schema, including the Solid Queue/Cache tables) before booting.
-5. Once, from the Render **Shell**, seed reference data: `bin/rails db:seed`.
-
-Health check: `GET /api/v1/health`.
-
-## Environment variables
-
-See `.env.example`.
-
-## Google OAuth setup
-
-Sign-in with Google uses OmniAuth (`omniauth-google-oauth2`). To obtain
-credentials:
-
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/) and
-   create (or select) a project.
-2. **OAuth consent screen** → choose **External**, fill in the app name,
-   support email, and developer contact. Add the `email` and `profile`
-   scopes. While unverified, add your testers under **Test users**.
-3. **Credentials** → **Create credentials** → **OAuth client ID** →
-   **Web application**.
-4. Add the **Authorized redirect URIs**:
-   - Development: `http://localhost:3000/api/v1/auth/google_oauth2/callback`
-   - Production: `https://<backend-domain>/api/v1/auth/google_oauth2/callback`
-5. Copy the generated **Client ID** and **Client secret** into your `.env`:
-
-   ```bash
-   GOOGLE_CLIENT_ID=...
-   GOOGLE_CLIENT_SECRET=...
-   ```
-
-The app boots fine with these left blank; the Google flow simply stays
-disabled until they are set.
-
-## Project tracking
-
-[JIRA board](https://86santiago.atlassian.net/jira/software/projects/SCRUM/boards/1)
+All configuration is via environment variables — see [`.env.example`](.env.example) for the full
+list (database, Rails secrets, Google OAuth, football-data.org, Resend, CORS origins, frontend URL).
+The production boot fails fast if any critical variable is missing.
 
 ## License
 
-Private.
+Personal portfolio project. Not affiliated with FIFA or football-data.org.
